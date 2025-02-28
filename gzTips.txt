@@ -1,0 +1,12 @@
+gz sim <File.sdf>
+ # Fortress and Citadel use "ign gazebo" instead of "gz sim"
+
+
+#Add the -v 4 command line argument to generate error, warning, informational, and debugging messages on the console.
+
+#Gazebo Sim can also be run headless, i.e. without the GUI, by using the -s (server only) flag.
+
+#Similarly, the GUI can be run independently using the -g (gui only) flag. On start, the GUI will attempt to connect to a server instance. If a server is not available, then you will see just a blank screen until a server instances is started.
+
+
+ #use  . /usr/share/gazebo/setup.sh after source the workspace

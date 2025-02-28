@@ -1,0 +1,81 @@
+# run this command on every new shell you open to have access to the ROS 2 commands
+source /opt/ros/humble/setup.bash 
+#Launching nodes
+
+#Launch files allow you to start up and configure a number of executables containing ROS 2 nodes simultaneously.
+
+ros2 launch 
+
+#Build Packages
+
+mkdir ros2_ws
+cd ros2_ws
+mkdir src
+
+colcon build
+colcon build --packages-select <pkg>
+
+--packages-up-to builds the package you want, plus all its dependencies, but not the whole workspace (saves time)
+
+--symlink-install saves you from having to rebuild every time you tweak python scripts
+
+--event-handlers console_direct+ shows console output while building (can otherwise be found in the log directory)
+
+--executor sequential processes the packages one by one instead of using parallelism
+
+colcon test
+
+source install/local_setup.bash
+. /usr/share/gazebo/setup.sh
+
+
+ros2 run
+#ros2 run examples_rclcpp_minimal_subscriber subscriber_member_function
+#ros2 run examples_rclcpp_minimal_publisher publisher_member_function 
+
+#build types 
+ament_cmake
+
+#allows you to quickly change the current working directory of your shell to the directory of a package
+colcon_cd 
+
+#resolve dependencies
+rosdep install -i --from-path src --rosdistro humble -y 
+
+#ROS 2 Python and CMake packages each have their own minimum required contents:
+
+#Cmake, do in src folder
+
+ros2 pkg create --build-type ament_cmake --license Apache-2.0 <package_name>
+
+#CMakePython
+CMakeLists.txt file that describes how to build the code within the package
+
+include/<package_name> directory containing the public headers for the package
+
+package.xml file containing meta information about the package
+
+src directory containing the source code for the package
+
+#build 1 pkg
+colcon build --packages-select <my_package>
+ros2 pkg create --build-type ament_cmake --license Apache-2.0 cpp_pubsub
+ros2 pkg create --build-type ament_cmake --license Apache-2.0 cpp_srvcli --dependencies rclcpp example_interfaces
+#The --dependencies argument will automatically add the necessary dependency lines to package.xml and CMakeLists.txt
+
+#Recall that dependencies have to be added to package.xml and CMakeLists.txt 
+
+
+    //prints to terminal
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Ready to add two ints.");
+
+ 
+
+
+
+
+
+
+
+
+

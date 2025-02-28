@@ -1,0 +1,73 @@
+# run this command on every new shell you open to have access to the ROS 2 commands
+source /opt/ros/humble/setup.bash
+
+ros2 run <package_name> <executable_name>
+
+ros2 node list
+ros2 node info <node_name>
+
+ros2 topic list
+ros2 topic info <topic> 
+ros2 topic list -t 
+#will return the same list of topics, this time with the topic type appended in brackets:
+
+To see the data being published on a topic
+ros2 topic echo <topic_name>
+ros2 topic hz <topic_name> 
+
+ros2 interface show <msg type>
+
+#publish to a topic directly
+ros2 topic pub <topic_name> <msg_type> '<args>'
+
+
+# Remapping allows you to reassign default node properties, like node name, topic names, service names, etc., to custom #values.
+ros2 run turtlesim turtlesim_node --ros-args --remap __node:=my_turtle
+
+
+#Makes a graph
+rqt_graph
+
+ros2 run rqt_console rqt_console
+
+#To find out the type of a service
+ros2 service type <service_name>
+
+#To see the types of all the active services at the same time
+ros2 service list -t
+
+#find all the services of a specific type
+ros2 service find <type_name>
+
+
+#call services from the command line, but first you need to know the structure of the input arguments
+ros2 interface show <type_name>
+
+# you can call a service using
+ros2 service call <service_name> <service_type> <arguments> 
+
+ros2 param list
+#Every node has the parameter use_sim_time
+
+ros2 param get <node_name> <parameter_name>
+
+ros2 param set <node_name> <parameter_name> <value>
+
+#iew all of a node’s current parameter values 
+ros2 param dump <node_name>
+#wirte it to a file ros2 param dump /turtlesim > turtlesim.yaml
+
+#You can load parameters from a file to a currently
+ros2 param load <node_name> <parameter_file>
+
+#Load parameter file on node startup, To start the same node using your saved parameter
+ros2 run <package_name> <executable_name> --ros-args --params-file <file_name>
+
+ros2 action list
+ros2 action list -t
+ros2 action info <action>
+
+# send an action goal from the command line, <values> need to be in YAML format.
+ros2 action send_goal <action_name> <action_type> <values>
+#To see the feedback of this goal, add --feedback
+
