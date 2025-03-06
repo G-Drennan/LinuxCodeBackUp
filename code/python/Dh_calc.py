@@ -19,7 +19,7 @@ def Rot_x(alpha):
 
 def n_1_A_n(theta, d, r, alpha):
     Tz = Trans_Z(d)
-    Rz = Rot_z(theta)
+    Rz = Rot_z(theta) 
     Tx = Trans_X(r)
     Rx = Rot_x(alpha) 
     return np.dot(np.dot(np.dot(Rz, Tz), Tx), Rx) 
@@ -43,8 +43,8 @@ def Base_2_end_effector(matrix_of_all_dh_param):
                 r = x
         
         A = n_1_A_n(theta,d,r,alpha)
-        AT = AT*A  
+        AT = np.dot(AT,A)    
     return AT   
                     #theta, d, alpha, r 
 dh_params = np.array([[0,163,90,0],[0,0,0,-425],[0,0,0,-392],[0,134,90,0],[0,100,-90,0]])
-print(Base_2_end_effector(dh_params))   
+print(Base_2_end_effector(dh_params))  
