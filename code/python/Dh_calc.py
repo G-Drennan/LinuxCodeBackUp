@@ -1,3 +1,9 @@
+#self.theta = [0, R[0], R[1]] #, R[1]   
+ #       self.d = [P[0], 0, 0] #P[1]  
+  #      self.a = [0, self.L2, self.L3 + P[1]] #self.L2, self.L3 + P[1]] 
+   #     self.alpha = [self.nnt, 0, self.nnt]   
+
+
 import math
 import numpy as np 
 
@@ -22,7 +28,7 @@ def n_1_A_n(theta, d, r, alpha):
     Rz = Rot_z(theta) 
     Tx = Trans_X(r) 
     Rx = Rot_x(alpha) 
-    return np.multiply(np.multiply(np.multiply(Rz, Tz), Tx), Rx) #np.dot() np.matmul() np.multiply() 
+    return np.matmul(np.matmul(np.matmul(Rz, Tz), Tx), Rx) #np.dot() np.matmul() np.multiply() 
 
 def Base_2_end_effector(matrix_of_all_dh_param):
     
@@ -43,7 +49,7 @@ def Base_2_end_effector(matrix_of_all_dh_param):
                 r = x
         
         A = n_1_A_n(theta,d,r,alpha)
-        AT = np.multiply(AT,A)    
+        AT = np.matmul(AT,A)    
     return AT   
                     #theta, d, alpha, r 
 dh_params = np.array([[0,163,90,0],[0,0,0,-425],[0,0,0,-392],[0,134,90,0],[0,100,-90,0]])
