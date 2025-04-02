@@ -1,0 +1,2 @@
+sudo dpkg -i <dir/Name> #update a app iwht its .deb file 
+
