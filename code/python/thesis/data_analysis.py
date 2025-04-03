@@ -19,7 +19,7 @@ def main():
         symbol = row['USDA Symbol']
         if symbol in USDA_Symbol:
             USDA_Symbol[symbol] += 1
-        else: 
+        else:  
             USDA_Symbol[symbol] = 1
     
     #sort the USDA_Symbol dic by value
@@ -38,7 +38,7 @@ def main():
             USDA_Symbol_for_analysis.append(key)
 
     #print the USDA_Symbol_100 dic
-    print(USDA_Symbol_100, "\n",  USDA_Symbol_for_analysis)
+    #print(USDA_Symbol_100, "\n",  USDA_Symbol_for_analysis)
 
     #extract data from the original data frame where USDA Symbol is in USDA_Symbol_for_analysis
     data = data[data['USDA Symbol'].isin(USDA_Symbol_for_analysis)]
@@ -48,22 +48,25 @@ def main():
     data = pd.read_csv(path)
 
     # Ensure xpoints and ypoints are 1D arrays for plotting
-    xpoints = data.iloc[0, 11:].values 
-    #print(xpoints)  
+    ypoints = data.iloc[0, 11:].values 
     #convert from np.float to float
-    xpoints = np.array(xpoints, dtype=float)
-    print(xpoints)
+    ypoints = np.array(ypoints, dtype=float)
+    #print(xpoints)
 
-    #the y values are in the header of the data frame
-    #ypoints = data.iloc[0, 11:].values 
-    ypoints = list(data)
-    #remove the first 10 rows
-    ypoints = ypoints[11:]
-    print(ypoints)
+    #the y values are in the header of the data frame 
+    xpoints = list(data)
+    xpoints = xpoints[11:] 
+    #print(ypoints)
 
     # Plot the data
-    plt.plot(xpoints, ypoints) 
-    plt.show()
+    plt.plot(xpoints, ypoints)  
+    #reduce the number of x ticks to 10
+    plt.xticks(np.arange(0, len(xpoints), len(xpoints)/10), fontsize=8)
+
+    #set the x and y axis labels    
+    plt.xlabel('Wavelength', fontsize=10)
+    plt.ylabel('Reflectance', fontsize=10)
+    plt.show() 
 
 if __name__ == "__main__":
     main()
