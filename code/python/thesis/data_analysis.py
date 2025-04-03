@@ -38,7 +38,7 @@ def main():
             USDA_Symbol_for_analysis.append(key)
 
     #print the USDA_Symbol_100 dic
-    print(USDA_Symbol_100, "\n",  USDA_Symbol_for_analysis)
+    #print(USDA_Symbol_100, "\n",  USDA_Symbol_for_analysis)
 
     #extract data from the original data frame where USDA Symbol is in USDA_Symbol_for_analysis 
     data = data[data['USDA Symbol'].isin(USDA_Symbol_for_analysis)]
