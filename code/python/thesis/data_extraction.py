@@ -3,6 +3,30 @@ import numpy as np
 #lib to read in csv files 
 import pandas as pd
 
+def token_sample_extract(token_Symbol_dic): 
+    token_Symbol_100 = {}
+    token_Symbol_for_analysis = []
+
+    #if token_Symbol value is > 100 add to a new dic 
+        #ensure that the number of samples is > 100 
+    for key, value in token_Symbol_dic.items(): 
+        if value > 100:
+            token_Symbol_100[key] = value 
+            #store key in a list 
+            token_Symbol_for_analysis.append(key)
+    return token_Symbol_100, token_Symbol_for_analysis
+
+def count_samples_by_symbol(data, sort_term):
+   
+    Symbol_count_dic = {}
+    for index, row in data.iterrows():  
+        symbol = row[sort_term]
+        if symbol in Symbol_count_dic:
+            Symbol_count_dic[symbol] += 1
+        else:  
+            Symbol_count_dic[symbol] = 1
+    return Symbol_count_dic
+
 def extract_data(sample_token = 'USDA Symbol', 
                 path = './data/fresh-leaf-spectra-to-estimate-lma-over-neon-domains-in-eastern-united-states.csv',  
                 final_path='./data/HS_data_for_analysis.csv'):
@@ -15,29 +39,14 @@ def extract_data(sample_token = 'USDA Symbol',
     data = data.dropna() 
 
     #for every row in data, add new USDA Symbol to a dic and count them if they aleard exist
-    token_Symbol = {}
-    for index, row in data.iterrows(): 
-        symbol = row[sample_token]
-        if symbol in token_Symbol:
-            token_Symbol[symbol] += 1
-        else:  
-            token_Symbol[symbol] = 1
+    token_Symbol = count_samples_by_symbol(data, sample_token)
     
     #sort the token_Symbol dic by value
     token_Symbol = dict(sorted(token_Symbol.items(), key=lambda item: item[1], reverse=True))
     #print(token_Symbol)
 
-    
-    token_Symbol_100 = {}
-    token_Symbol_for_analysis = []
-
-    #if token_Symbol value is > 100 add to a new dic 
-        #ensure that the number of samples is > 100 
-    for key, value in token_Symbol.items():
-        if value > 100:
-            token_Symbol_100[key] = value 
-            #store key in a list 
-            token_Symbol_for_analysis.append(key)
+    token_Symbol_100, token_Symbol_for_analysis  = token_sample_extract(token_Symbol)
+   
 
     #print the token_Symbol_100 dic
     print(token_Symbol_100, "\n",  token_Symbol_for_analysis) 
@@ -47,7 +56,7 @@ def extract_data(sample_token = 'USDA Symbol',
     #make a csv file of the data
     path = final_path
     data.to_csv(path, index=False)  
-    return data
+    return data, token_Symbol_for_analysis
 
 def main(): 
     extract_data() 
