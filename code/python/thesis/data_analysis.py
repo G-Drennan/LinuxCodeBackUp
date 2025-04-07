@@ -105,16 +105,18 @@ def create_data_set(data, sort_term='USDA Symbol', data_start=1, all = False, da
             
             #add matrix to dic
             token_symbol_of_matixs[last_symbol] = data_matrix 
-
+            print( "[data_matrix_LAST]",data_matrix[-1,:])  
+            print( "[data_matrix_FIRST]",data_matrix[0,:]) 
+            print("[token_symbol_of_matixs]", token_symbol_of_matixs[last_symbol])
             #stop the whole program
-            #exit()
+            exit()
             #reset matrix
-            data_matrix = np.zeros((len(data), token_Symbol_sample_no_dic[symbol]))  
+            data_matrix = np.zeros((token_Symbol_sample_no_dic[symbol],  data_len))  
             overall_index = index  
 
         if last_symbol is None:
             #reduce the  matrix to the size of token_Symbol_sample_no_dic[last_symbol]
-            data_matrix = data_matrix[:token_Symbol_sample_no_dic[symbol],:]
+            data_matrix = np.zeros((token_Symbol_sample_no_dic[symbol], data_len)) 
 
         # Ensure xpoints and ypoints are 1D arrays for plotting
         ypoints = extract_ypoints(row, True, data_start)
@@ -152,8 +154,6 @@ def random_matrix_rows(class_matrix_dic, num_rows=45):
         random_matrix_dic[key] = value[random_rows]
     return random_matrix_dic
 
-
-
 def dataset_genration(data, all = False, squre_size = 45, sort_term='USDA Symbol', data_start = 1):
     if all is True: 
         squre_size = len(data.iloc[data_start:])
@@ -172,6 +172,14 @@ def matrix_to_image(matrix, output_path): #, mode_type='L'
     image.save(output_path)
     #print("Image saved at", output_path)
 
+def create_image_from_data(data, all = False, squre_size = 45, sort_term='USDA Symbol', data_start=1):
+    random_matrix_rows_dic = dataset_genration(data, all, squre_size, sort_term, data_start)
+    for key, value in random_matrix_rows_dic.items():
+        # Convert the matrix to an image and save it 
+        path = f"./data/{key}_whole_dataset_map.png"  
+        matrix_to_image(value, path) 
+        print(f"Image saved for {key} at {path}")  
+        break
 
 def main():
     #extract_data()   
@@ -179,8 +187,9 @@ def main():
     data = pd.read_csv(path) 
     #sort data by USDA Symbol
     data = data.sort_values(by=['USDA Symbol'])
+    #create_image_from_data(data) 
     #plot_wavelength(data,'USDA Symbol') 
-    print(dataset_genration(data))     
+    dataset_genration(data)  
 
 
 
