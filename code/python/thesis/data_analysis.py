@@ -117,7 +117,7 @@ def create_data_set(data, sort_term='USDA Symbol', data_start=1, all = False, da
         # Ensure xpoints and ypoints are 1D arrays for plotting
         ypoints = extract_ypoints(row, True, data_start)
 
-        # Ensure ypoints has exactly data_len
+        # Ensure ypoints has exactly data_len and evenly spaced the data points thru the data set 
         ypoints = np.linspace(ypoints[0], ypoints[-1], data_len)
         
         #convert ypoints to float
@@ -177,8 +177,11 @@ def create_image_from_data(data, all = False, squre_size = 45, sort_term='USDA S
     for key, value in random_matrix_rows_dic.items(): 
         #print("HERE")
         # Convert the matrix to an image and save it 
-        path = f"./data/{key}_whole_dataset_map.png"  
-        matrix_to_image(value, path) 
+        if all is True:
+            path = f"./data/{key}_whole_dataset_map.png"  
+        else:
+            path = f"./data/{key}_random_dataset_sample_size_{squre_size}_square_map.png" 
+        matrix_to_image(value, path)  
         print(f"Image saved for {key} at {path}")  
         break
 
@@ -188,8 +191,8 @@ def main():
     data = pd.read_csv(path) 
     #sort data by USDA Symbol
     data = data.sort_values(by=['USDA Symbol'])
-    create_image_from_data(data, True)  
-    #plot_wavelength(data,'USDA Symbol') 
+    create_image_from_data(data)   
+    #plot_wavelength(data,'USDA Symbol')  
     #dataset_genration(data)  
 
 
