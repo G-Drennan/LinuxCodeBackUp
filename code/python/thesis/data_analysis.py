@@ -183,7 +183,7 @@ def create_image_from_data(data, all = False, squre_size = 45, sort_term='USDA S
             path = f"./data/{key}_random_dataset_sample_size_{squre_size}_square_map.png" 
         matrix_to_image(value, path)  
         print(f"Image saved for {key} at {path}")  
-        break
+        #break #used to test and create only 1 image 
 
 def main():
     #extract_data()   
