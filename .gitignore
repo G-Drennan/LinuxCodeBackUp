@@ -2,4 +2,7 @@ fresh-leaf-spectra-to-estimate-lma-over-neon-domains-in-eastern-united-states.cs
 HS_data_for_analysis.csv
 test.py
 test.png
-*/_pycache_/ 
+__pycache__/  
+#ignore the folder MTRX5700
+MTRX5700/ 
+test/ 
