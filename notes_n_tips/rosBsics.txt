@@ -13,6 +13,8 @@ cd ros2_ws
 mkdir src
 
 colcon build
+source install/local_setup.bash
+
 colcon build --packages-select <pkg>
 
 --packages-up-to builds the package you want, plus all its dependencies, but not the whole workspace (saves time)
