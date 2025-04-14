@@ -1,8 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 #lib to read in csv files 
 import pandas as pd
 from PIL import Image  # Add this import for image processing
+
+from sklearn.model_selection import train_test_split
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+
 
 #import cv2
 
@@ -13,27 +19,43 @@ from data_extraction import count_samples_by_symbol
 # Set NumPy print options to display higher precision
 np.set_printoptions(precision=10, suppress=False) 
 
-def extract_xpoints(data, data_start=1): 
+#gives the wavelength data from the header of the data frame
+def extract_wavelength(data, data_start=1): 
     xpoints = list(data)
     xpoints = xpoints[data_start:] 
     return xpoints 
 
 #usage:
 #for index, row in data.iterrows():
-    #    ypoints = extract_ypoints(row)
-def extract_ypoints(data, toggle_float_conversion, data_start=1): 
+    #    ypoints = extract_reflectance_from_row(row) 
+    # gives the reflectance data from the row
+def extract_reflectance_from_row(data, data_start=1, toggle_float_conversion=True): 
     ypoints = data.iloc[data_start:].values
     # convert from np.float to float
     if toggle_float_conversion is True:
         ypoints = np.array(ypoints, dtype=float)
     return ypoints
 
+def extract_class_coloum(data, sort_term='USDA Symbol', data_start=1):
+    #extract the class coloum from the data frame 
+    #and return it as a list
+    class_coloum = data[sort_term].values.tolist()
+    return class_coloum
+
+def extract_reflectance(data, normalise = True,  data_start=1):
+    #extract the data from the data frame 
+    data = data.iloc[:, data_start:] 
+    #normalise the data
+    if normalise is True:
+        data = (data - data.min()) / (data.max() - data.min()) 
+    return data 
+
 def plot_wavelength(data, sort_term, data_start=1):
     data = data.sort_values(by=[sort_term])
     #ensu the data is sorted by sort_term
 
    #the x values are in the header of the data frame 
-    xpoints = extract_xpoints(data,data_start) 
+    xpoints = extract_wavelength(data,data_start) 
 
     #for every row in data, add new USDA Symbol to a dic and count them if they aleard exist
 
@@ -46,7 +68,7 @@ def plot_wavelength(data, sort_term, data_start=1):
     for index, row in data.iterrows(): 
         symbol = row[sort_term] 
         
-        ypoints = extract_ypoints(row, True, data_start)
+        ypoints = extract_reflectance_from_row(row, data_start) 
 
         if symbol != last_symbol and last_symbol is not None:
             # Show the current figure and start a new one
@@ -61,7 +83,7 @@ def plot_wavelength(data, sort_term, data_start=1):
             #save plot as a png file
             plt.savefig(f'./data/{last_symbol}_wavelenght_reflectance_plot.png')
             plt.show()
-            plt.figure() 
+            plt.figure()  
             
         # Plot the data
         plt.plot(xpoints, ypoints, label=f"Sample {index}")
@@ -78,10 +100,33 @@ def plot_wavelength(data, sort_term, data_start=1):
         plt.savefig(f'./data/{last_symbol}_wavelenght_reflectance_plot.png')
         plt.show() 
 
-def create_data_set(data, sort_term='USDA Symbol', data_start=1, all = False, data_len=45, toggle_norm = False, toggle_float_conversion=True ): 
+
+def principal_component_analysis(xpoints, ypoints, n_components = 45):
+ 
+    # if we want to know if the wavelegnth is significant in the data set
+    # then we need to do PCA on the data set where in  
+    # xpoint is independent variable and ypoints is dependent variable
+    # xpoints are reflectance values and ypoints are the wavelength values
+
+    x_train, x_test, y_train, y_test = train_test_split(xpoints, ypoints, test_size=0.2, random_state=42)
+    
+    #data is assumed to be on the same scale
+
+    pca1 = PCA()
+    x_pca1 = pca1.fit_transform(x_train) 
+    #print(pca1.explained_variance_ratio_())   
+    plt.plot(pca1.explained_variance_ratio_)
+    plt.xlabel('number of components')
+    plt.ylabel('cumulative explained variance')
+    plt.show()
+
+    #pca1c = PCA(n_components)  
+    #X_pac1c = pca1c.fit_transform(x_train)
+
+def create_even_spaced_data_set(data, sort_term='USDA Symbol', data_start=1, all = False, data_len=45, toggle_norm = False, toggle_float_conversion=True ): 
     data = data.sort_values(by=[sort_term])
     token_Symbol_sample_no_dic =  count_samples_by_symbol(data, sort_term) 
-    print(token_Symbol_sample_no_dic) 
+    print(token_Symbol_sample_no_dic)  
     #find len of data from data_start to end of data 
     if all is True:
         data_len = len(data.iloc[data_start:])
@@ -115,7 +160,7 @@ def create_data_set(data, sort_term='USDA Symbol', data_start=1, all = False, da
             data_matrix = np.zeros((token_Symbol_sample_no_dic[symbol], data_len)) 
 
         # Ensure xpoints and ypoints are 1D arrays for plotting
-        ypoints = extract_ypoints(row, True, data_start)
+        ypoints = extract_reflectance_from_row(row, data_start) 
 
         # Ensure ypoints has exactly data_len and evenly spaced the data points thru the data set 
         ypoints = np.linspace(ypoints[0], ypoints[-1], data_len)
@@ -132,9 +177,6 @@ def create_data_set(data, sort_term='USDA Symbol', data_start=1, all = False, da
         data_matrix[index-overall_index] = ypoints 
         
         last_symbol = symbol
-    
-    #print dic
-    #print("[TOKEN SYMBOL DIC]", _of_mat)
 
     return token_symbol_of_matixs 
 
@@ -148,17 +190,18 @@ def random_matrix_rows(class_matrix_dic, num_rows=45):
         random_matrix_dic[key] = value[random_rows]
     return random_matrix_dic
 
-def dataset_genration(data, all = False, squre_size = 45, sort_term='USDA Symbol', data_start = 1):
+def dataset_genration_2d(data, all = False, squre_size = 45, sort_term='USDA Symbol', data_start = 1):
     
     if all is True: 
         squre_size = len(data.iloc[data_start:])
     
-    class_matrix_dic = create_data_set(data, sort_term, data_start, all, squre_size, toggle_norm = False)
+    class_matrix_dic = create_even_spaced_data_set(data, sort_term, data_start, all, squre_size, toggle_norm = False)
     if all is False:
         random_matrix_rows_dic = random_matrix_rows(class_matrix_dic, num_rows = squre_size) 
+        return random_matrix_rows_dic
     else:
-        random_matrix_rows_dic = class_matrix_dic   
-    return random_matrix_rows_dic   
+        return class_matrix_dic    
+    return None   
 
 def matrix_to_image(matrix, output_path): #, mode_type='L'
     #reshape matrix data into 2D grey image     
@@ -173,7 +216,7 @@ def matrix_to_image(matrix, output_path): #, mode_type='L'
 
 def create_image_from_data(data, all = False, squre_size = 45, sort_term='USDA Symbol', data_start=1):
     
-    random_matrix_rows_dic = dataset_genration(data, all, squre_size, sort_term, data_start)
+    random_matrix_rows_dic = dataset_genration_2d(data, all, squre_size, sort_term, data_start)
     for key, value in random_matrix_rows_dic.items(): 
         #print("HERE")
         # Convert the matrix to an image and save it 
@@ -188,11 +231,16 @@ def create_image_from_data(data, all = False, squre_size = 45, sort_term='USDA S
 def main():
     #extract_data()   
     path = './data/HS_data_for_analysis.csv' 
-    data = pd.read_csv(path) 
+    data = pd.read_csv(path)  
     #sort data by USDA Symbol
-    data = data.sort_values(by=['USDA Symbol'])
-    create_image_from_data(data)   
-    #plot_wavelength(data,'USDA Symbol')  
+    data = data.sort_values(by=['USDA Symbol']) 
+    #print () 
+    #print (extract_class_coloum(data))    
+
+    principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data)) 
+
+    #create_image_from_data(data, True)   
+    #plot_wavelength(data,'USDA Symbol')   
     #dataset_genration(data)  
 
 
@@ -230,7 +278,7 @@ def matrix_to_image(matrix, output_path): #, mode_type='L'
 
 def create_image_from_data(data, sort_term='USDA Symbol', data_start=11):
     data = data.sort_values(by=[sort_term])
-    class_matrix_dic = create_data_set(data, sort_term, data_start)
+    class_matrix_dic = create_rand_data_set(data, sort_term, data_start)
     for key, value in class_matrix_dic.items():
         # Convert the matrix to an image and save it 
         path = f"./data/{key}_whole_dataset_map.png"  
