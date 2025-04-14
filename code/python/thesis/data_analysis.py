@@ -267,10 +267,8 @@ def main():
     data = data.sort_values(by=['USDA Symbol'])      
 
     #principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data), 20)     
-    print(extract_class_from_image_name('ACRU_random_dataset_sample_size_45_square_map.png')) 
     #create_image_from_data(data, True)   
-    #plot_wavelength(data,'USDA Symbol')    
-    #dataset_genration(data)  
+    #plot_wavelength(data,'USDA Symbol')
 
 
 
