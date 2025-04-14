@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-#lib to read in csv files 
+#lib to read in csv files  
 import pandas as pd
 from PIL import Image  # Add this import for image processing
 
@@ -233,19 +233,31 @@ def matrix_to_image(matrix, output_path): #, mode_type='L'
     image.save(output_path)
     #print("Image saved at", output_path)
 
-def create_image_from_data(data, all = False, squre_size = 45, sort_term='USDA Symbol', data_start=1):
+#ID allows multiple images to be created with different names loop over create_image_from_data 
+def create_image_from_data(data, ID, all = False, squre_size = 45, sort_term='USDA Symbol', data_start=1):
     
     random_matrix_rows_dic = dataset_genration_2d(data, all, squre_size, sort_term, data_start)
+
     for key, value in random_matrix_rows_dic.items(): 
         #print("HERE")
         # Convert the matrix to an image and save it 
         if all is True:
             path = f"./data/{key}_whole_dataset_map.png"  
         else:
-            path = f"./data/{key}_random_dataset_sample_size_{squre_size}_square_map.png" 
+            path = f"./data/{key}_random_dataset_sample_size_{squre_size}_square_map_ID{ID}.png" 
         matrix_to_image(value, path)  
         print(f"Image saved for {key} at {path}")  
         #break #used to test and create only 1 image 
+    return None
+
+def extract_class_from_image_name(image_name):
+    # Extract the class from the image name
+    # Assuming the format is like 'class_name_random_dataset_sample_size_45_square_map_ID1.png'
+    parts = image_name.split('_')
+    if len(parts) > 0:
+        class_name = parts[0]
+        return class_name
+    return None
 
 def main():
     #extract_data()   
@@ -254,8 +266,8 @@ def main():
     #sort data by USDA Symbol
     data = data.sort_values(by=['USDA Symbol'])      
 
-    principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data), 20)     
-
+    #principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data), 20)     
+    print(extract_class_from_image_name('ACRU_random_dataset_sample_size_45_square_map.png')) 
     #create_image_from_data(data, True)   
     #plot_wavelength(data,'USDA Symbol')    
     #dataset_genration(data)  
