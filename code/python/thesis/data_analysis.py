@@ -16,22 +16,19 @@ from data_extraction import count_samples_by_symbol
 # Set NumPy print options to display higher precision
 np.set_printoptions(precision=10, suppress=False) 
 
-#gives the wavelength data from the header of the data frame
-def extract_wavelength(data, data_start=1): 
-    xpoints = list(data)
-    xpoints = xpoints[data_start:] 
-    return xpoints 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~Collect data from the CSV file~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#usage:
-#for index, row in data.iterrows():
-    #    ypoints = extract_reflectance_from_row(row) 
-    # gives the reflectance data from the row
 def extract_reflectance_from_row(data, data_start=1, toggle_float_conversion=True): 
     ypoints = data.iloc[data_start:].values
     # convert from np.float to float
     if toggle_float_conversion is True:
         ypoints = np.array(ypoints, dtype=float)
     return ypoints
+
+def extract_wavelength(data, data_start=1): 
+    xpoints = list(data)
+    xpoints = xpoints[data_start:] 
+    return xpoints 
 
 def extract_class_coloum(data, sort_term='USDA Symbol', data_start=1):
     #extract the class coloum from the data frame 
@@ -44,6 +41,7 @@ def extract_reflectance(data, data_start=1):
     data = data.iloc[:, data_start:]  
     return data 
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Plotting the data~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def plot_wavelength(data, sort_term, data_start=1):
     data = data.sort_values(by=[sort_term])
     #ensu the data is sorted by sort_term
@@ -94,7 +92,7 @@ def plot_wavelength(data, sort_term, data_start=1):
         plt.savefig(f'./data/{last_symbol}_wavelenght_reflectance_plot.png')
         plt.show() 
 
-
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~PCA~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def principal_component_analysis(xpoints, ypoints, n_components = 45):
  
     # if we want to know if the wavelegnth is significant in the data set
@@ -138,10 +136,7 @@ def principal_component_analysis(xpoints, ypoints, n_components = 45):
 
     #find the PC wavelengths that have the highest loadings
 
-
-    
-
-
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Data set generation~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def create_even_spaced_data_set(data, sort_term='USDA Symbol', data_start=1, all = False, data_len=45, toggle_norm = False, toggle_float_conversion=True ): 
     data = data.sort_values(by=[sort_term])
     token_Symbol_sample_no_dic =  count_samples_by_symbol(data, sort_term) 
@@ -199,6 +194,7 @@ def create_even_spaced_data_set(data, sort_term='USDA Symbol', data_start=1, all
 
     return token_symbol_of_matixs 
 
+
 def random_matrix_rows(class_matrix_dic, num_rows=45):
     #randomly select num_rows from each matrix in the dic and return a new dic
     random_matrix_dic = {}
@@ -208,6 +204,7 @@ def random_matrix_rows(class_matrix_dic, num_rows=45):
         #create a new matrix with the random rows 
         random_matrix_dic[key] = value[random_rows]
     return random_matrix_dic
+
 
 def dataset_genration_2d(data, all = False, squre_size = 45, sort_term='USDA Symbol', data_start = 1):
     
@@ -221,6 +218,7 @@ def dataset_genration_2d(data, all = False, squre_size = 45, sort_term='USDA Sym
     else:
         return class_matrix_dic    
     return None   
+
 
 def matrix_to_image(matrix, output_path): #, mode_type='L'
     #reshape matrix data into 2D grey image     
@@ -250,6 +248,7 @@ def create_image_from_data(data, ID, all = False, squre_size = 45, sort_term='US
         #break #used to test and create only 1 image 
     return None
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~miscellaneous~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def extract_class_from_image_name(image_name):
     # Extract the class from the image name
     # Assuming the format is like 'class_name_random_dataset_sample_size_45_square_map_ID1.png'
@@ -269,8 +268,6 @@ def main():
     #principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data), 20)     
     #create_image_from_data(data, True)   
     #plot_wavelength(data,'USDA Symbol')
-
-
 
 if __name__ == "__main__":
     main()
