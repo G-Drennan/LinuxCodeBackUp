@@ -110,12 +110,13 @@ def principal_component_analysis(xpoints, ypoints, n_components = 45):
     scaler = StandardScaler()
     x_train = scaler.fit_transform(x_train) 
 
-    pca = PCA(n_components) 
+    pca = PCA(n_components)  
     x_pca = pca.fit_transform(x_train) 
     #print(pca1.explained_variance_ratio_())   
     plt.plot(pca.explained_variance_ratio_) 
     plt.xlabel('number of components')
     plt.ylabel('cumulative explained variance') 
+    plt.savefig(f'./data/PCA_cumulative_explained_variance.png') 
     plt.show() 
 
     plt.bar(range(1, len(pca.explained_variance_)+1), pca.explained_variance_)
@@ -125,22 +126,23 @@ def principal_component_analysis(xpoints, ypoints, n_components = 45):
              np.cumsum(pca.explained_variance_), c='red', label='cumulative explained variance')
     plt.legend(loc = 'upper left')
     plt.title('PCA explained variance') 
+    #save plot as a png file
+    plt.savefig(f'./data/PCA_explained_variance.png')
     plt.show() 
 
     # Analyze loadings
     loadings = pca.components_  # Shape: (n_components, n_features)
     wavelengths = extract_wavelength(pd.DataFrame(xpoints))  # Extract wavelength headers
-    #print("Loadings:", loadings) 
-    #print("Wavelengths:", wavelengths)
+    #print("Loadings shape:", loadings.shape)
+    #print("loadings:", loadings) 
+    # CV has 2096 rows inlcuding the header, and 2151 colums including the class row, 
+    # Loadings shape: (n_components, 2151) (PC, features)   
+    # thus the colums/wavelengths are the features. 
 
-     # Find the most informative wavelengths for the first principal component
-    pc_loadings = loadings[0]  # First principal component
-    informative_wavelengths = sorted(
-        zip(wavelengths, pc_loadings), key=lambda x: abs(x[1]), reverse=True
-    )
+    #find the PC wavelengths that have the highest loadings
 
-    for wavelength, loading in informative_wavelengths[:n_components]: 
-        print(f"Wavelength: {wavelength}, Loading: {loading}")
+
+    
 
 
 def create_even_spaced_data_set(data, sort_term='USDA Symbol', data_start=1, all = False, data_len=45, toggle_norm = False, toggle_float_conversion=True ): 
@@ -253,14 +255,12 @@ def main():
     path = './data/HS_data_for_analysis.csv' 
     data = pd.read_csv(path)  
     #sort data by USDA Symbol
-    data = data.sort_values(by=['USDA Symbol']) 
-    #print () 
-    #print (extract_class_coloum(data))    
+    data = data.sort_values(by=['USDA Symbol'])      
 
-    principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data))   
+    principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data), 20)     
 
     #create_image_from_data(data, True)   
-    #plot_wavelength(data,'USDA Symbol')   
+    #plot_wavelength(data,'USDA Symbol')    
     #dataset_genration(data)  
 
 
