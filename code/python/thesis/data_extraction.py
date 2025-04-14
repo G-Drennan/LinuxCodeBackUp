@@ -38,21 +38,23 @@ def extract_data(sample_token = 'USDA Symbol',
     #remove nan values from the data frame 
     data = data.dropna() 
 
-    #for every row in data, add new USDA Symbol to a dic and count them if they aleard exist
+    #for every row in data, add new USDA Symbol to a dic and count them if they aleady exist
     token_Symbol = count_samples_by_symbol(data, sample_token)
     
     #sort the token_Symbol dic by value
     token_Symbol = dict(sorted(token_Symbol.items(), key=lambda item: item[1], reverse=True))
     #print(token_Symbol)
 
+    #extrat the token with the most samples, e.g >100
     token_Symbol_100, token_Symbol_for_analysis  = token_sample_extract(token_Symbol)
    
-
     #print the token_Symbol_100 dic
     print(token_Symbol_100, "\n",  token_Symbol_for_analysis) 
 
-    #extract data from the original data frame where USDA Symbol is in token_Symbol_for_analysis 
+    #extract data from the original data frame where USDA Symbol is in token_Symbol_for_analysis  
+    #excluding data with less than 100 samples
     data = data[data[sample_token].isin(token_Symbol_for_analysis)]
+    
     #make a csv file of the data
     path = final_path
     data = data.sort_values(by=[sample_token]) 

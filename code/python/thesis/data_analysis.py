@@ -42,12 +42,9 @@ def extract_class_coloum(data, sort_term='USDA Symbol', data_start=1):
     class_coloum = data[sort_term].values.tolist()
     return class_coloum
 
-def extract_reflectance(data, normalise = True,  data_start=1):
+def extract_reflectance(data, data_start=1):
     #extract the data from the data frame 
-    data = data.iloc[:, data_start:] 
-    #normalise the data
-    if normalise is True:
-        data = (data - data.min()) / (data.max() - data.min()) 
+    data = data.iloc[:, data_start:]  
     return data 
 
 def plot_wavelength(data, sort_term, data_start=1):
@@ -110,18 +107,26 @@ def principal_component_analysis(xpoints, ypoints, n_components = 45):
 
     x_train, x_test, y_train, y_test = train_test_split(xpoints, ypoints, test_size=0.2, random_state=42)
     
-    #data is assumed to be on the same scale
+    # Standardize the data
+    scaler = StandardScaler()
+    x_train = scaler.fit_transform(x_train) 
 
-    pca1 = PCA()
-    x_pca1 = pca1.fit_transform(x_train) 
+    pca = PCA(n_components) 
+    x_pca = pca.fit_transform(x_train) 
     #print(pca1.explained_variance_ratio_())   
-    plt.plot(pca1.explained_variance_ratio_)
+    plt.plot(pca.explained_variance_ratio_) 
     plt.xlabel('number of components')
-    plt.ylabel('cumulative explained variance')
-    plt.show()
+    plt.ylabel('cumulative explained variance') 
+    plt.show() 
 
-    #pca1c = PCA(n_components)  
-    #X_pac1c = pca1c.fit_transform(x_train)
+    plt.bar(range(1, len(pca.explained_variance_)+1), pca.explained_variance_)
+    plt.ylabel('explained variance')
+    plt.xlabel('number of components')
+    plt.plot(range(1,len(pca.explained_variance_)+1), 
+             np.cumsum(pca.explained_variance_), c='red', label='cumulative explained variance')
+    plt.legend(loc = 'upper left')
+    plt.title('PCA explained variance') 
+    plt.show() 
 
 def create_even_spaced_data_set(data, sort_term='USDA Symbol', data_start=1, all = False, data_len=45, toggle_norm = False, toggle_float_conversion=True ): 
     data = data.sort_values(by=[sort_term])
