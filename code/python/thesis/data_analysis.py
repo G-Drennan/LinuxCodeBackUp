@@ -9,9 +9,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-
-#import cv2
-
 from data_extraction import extract_data
 from data_extraction import token_sample_extract
 from data_extraction import count_samples_by_symbol 
