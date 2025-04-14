@@ -102,8 +102,7 @@ def principal_component_analysis(xpoints, ypoints, n_components = 45):
  
     # if we want to know if the wavelegnth is significant in the data set
     # then we need to do PCA on the data set where in  
-    # xpoint is independent variable and ypoints is dependent variable
-    # xpoints are reflectance values and ypoints are the wavelength values
+    # xpoints are reflectance values and ypoints are the class labels
 
     x_train, x_test, y_train, y_test = train_test_split(xpoints, ypoints, test_size=0.2, random_state=42)
     
@@ -127,6 +126,22 @@ def principal_component_analysis(xpoints, ypoints, n_components = 45):
     plt.legend(loc = 'upper left')
     plt.title('PCA explained variance') 
     plt.show() 
+
+    # Analyze loadings
+    loadings = pca.components_  # Shape: (n_components, n_features)
+    wavelengths = extract_wavelength(pd.DataFrame(xpoints))  # Extract wavelength headers
+    #print("Loadings:", loadings) 
+    #print("Wavelengths:", wavelengths)
+
+     # Find the most informative wavelengths for the first principal component
+    pc_loadings = loadings[0]  # First principal component
+    informative_wavelengths = sorted(
+        zip(wavelengths, pc_loadings), key=lambda x: abs(x[1]), reverse=True
+    )
+
+    for wavelength, loading in informative_wavelengths[:n_components]: 
+        print(f"Wavelength: {wavelength}, Loading: {loading}")
+
 
 def create_even_spaced_data_set(data, sort_term='USDA Symbol', data_start=1, all = False, data_len=45, toggle_norm = False, toggle_float_conversion=True ): 
     data = data.sort_values(by=[sort_term])
@@ -242,7 +257,7 @@ def main():
     #print () 
     #print (extract_class_coloum(data))    
 
-    principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data)) 
+    principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data))   
 
     #create_image_from_data(data, True)   
     #plot_wavelength(data,'USDA Symbol')   
