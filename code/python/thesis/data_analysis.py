@@ -18,17 +18,26 @@ np.set_printoptions(precision=10, suppress=False)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~Collect data from the CSV file~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def extract_reflectance_from_row(data, data_start=1, toggle_float_conversion=True): 
-    ypoints = data.iloc[data_start:].values
+def extract_reflectance_from_row(data, data_start, data_end, toggle_float_conversion=True): 
+    ypoints = data.iloc[data_start:data_end].values   
     # convert from np.float to float
     if toggle_float_conversion is True:
-        ypoints = np.array(ypoints, dtype=float)
+        ypoints = np.array(ypoints, dtype=float) 
     return ypoints
 
-def extract_wavelength(data, data_start=1): 
+def extract_wavelength(data, min_wavelength = 0, max_wavelength = 2500, data_start=1): 
     xpoints = list(data)
-    xpoints = xpoints[data_start:] 
-    return xpoints 
+    xpoints = xpoints[data_start:]   
+    if min_wavelength == 0: #all the data is used
+        min_wavelength_index = data_start
+        max_wavelength_index = len(data) 
+        return xpoints, min_wavelength_index, max_wavelength_index #-1 throws an error as their is no min_wave_index  
+    else: #ensure the xpoints are above or equal to min_wavelength 
+        xpoints_restricted_wavelength = [x for x in xpoints if x.isnumeric() and int(x) >= min_wavelength and int(x) <= max_wavelength]
+        #count how far along xpoints the min_wavelength is
+        min_wavelength_index = xpoints.index(xpoints_restricted_wavelength[0])
+        max_wavelength_index = xpoints.index(xpoints_restricted_wavelength[-1]) 
+        return xpoints_restricted_wavelength, min_wavelength_index, max_wavelength_index 
 
 def extract_class_coloum(data, sort_term='USDA Symbol', data_start=1):
     #extract the class coloum from the data frame 
@@ -42,13 +51,14 @@ def extract_reflectance(data, data_start=1):
     return data 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Plotting the data~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def plot_wavelength(data, sort_term, data_start=1):
+def plot_wavelength(data, sort_term, min_wavelength = 0, max_wavelength = 2500, data_start=1):
     data = data.sort_values(by=[sort_term])
-    #ensu the data is sorted by sort_term
+    #ensu the data is sorted by sort_term 
 
    #the x values are in the header of the data frame 
-    xpoints = extract_wavelength(data,data_start) 
-
+    xpoints, data_start, data_end = extract_wavelength(data, min_wavelength, max_wavelength, data_start) 
+    data_start +=1  
+    #print(xpoints, data_start) 
     #for every row in data, add new USDA Symbol to a dic and count them if they aleard exist
 
     Symbol_sample_count = count_samples_by_symbol(data,sort_term) 
@@ -60,7 +70,7 @@ def plot_wavelength(data, sort_term, data_start=1):
     for index, row in data.iterrows(): 
         symbol = row[sort_term] 
         
-        ypoints = extract_reflectance_from_row(row, data_start) 
+        ypoints = extract_reflectance_from_row(row, data_start, data_end) 
 
         if symbol != last_symbol and last_symbol is not None:
             # Show the current figure and start a new one
@@ -89,8 +99,8 @@ def plot_wavelength(data, sort_term, data_start=1):
         plt.xticks(np.arange(0, len(xpoints), len(xpoints)/10), fontsize=8) 
         plt.text(0.75, 0.75, f"Samples: {Symbol_sample_count[last_symbol]}", fontsize=12, ha='left', va='top', transform=plt.gca().transAxes)
         
-        plt.savefig(f'./data/{last_symbol}_wavelenght_reflectance_plot.png')
-        plt.show() 
+        plt.savefig(f'./data/reflectance_v_wavelength/{last_symbol}_wavelenght_reflectance_plot.png')
+        plt.show()  
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~PCA~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def principal_component_analysis(xpoints, ypoints, n_components = 45):
@@ -137,6 +147,120 @@ def principal_component_analysis(xpoints, ypoints, n_components = 45):
     #find the PC wavelengths that have the highest loadings
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Data set generation~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+def matrix_to_image(matrix, output_path, mode='L'): #, mode_type='L'
+    #reshape matrix data into 2D grey image     
+    # Normalize the matrix values to the range [0, 255]
+    normalized_matrix = (matrix - np.min(matrix)) / (np.max(matrix) - np.min(matrix)) * 255
+    normalized_matrix = normalized_matrix.astype(np.uint8)  # Convert to unsigned 8-bit integer
+    # Create an image from the normalized matrix
+    image = Image.fromarray(normalized_matrix, mode)  # 'L' mode is for grayscale images
+    # Save the image as a PNG file
+    image.save(output_path)
+    #print("Image saved at", output_path)
+    return output_path
+
+#ID allows multiple images to be created with different names loop over create_image_from_data 
+def convert_1d_matrix_to_2d_matrix(matrix, squre_size = 45):
+    # Convert a 1D reflectance matrix to a 2D grayscale image and save it.
+    #:param matrix: The input 1D matrix (e.g., reflectance data).
+    #:param output_path: The path to save the image.
+    # Flatten the matrix to ensure it's 1D
+    flattened_matrix = matrix.flatten()
+    # Reshape the 1D data into a 45 × 45 2D array 
+    reshaped_matrix = flattened_matrix[:(squre_size*squre_size)].reshape((squre_size, squre_size))
+
+    return reshaped_matrix 
+
+def select_points(ypoints, squre_size):
+    # Ensure ypoints has exactly squre_size and evenly spaced the data points thru the data set 
+    if len(ypoints) > squre_size:
+        ypoints = np.linspace(ypoints[0], ypoints[-1], squre_size)
+    elif len(ypoints) < squre_size:
+        raise ValueError("ypoints is less than squre_size")
+    return ypoints
+
+def dataset_genration(data, min_wavelength, max_wavelength, squre_size = 45,  data_start = 1,  sort_term = 'USDA Symbol'):
+    xpoints, data_start, data_end = extract_wavelength(data, min_wavelength, max_wavelength, data_start) 
+    sample_counter = 0
+    last_symbol = None
+    for index, row in data.iterrows():
+        symbol = row[sort_term] 
+        #print("symbol", symbol)
+        ypoints_1d = extract_reflectance_from_row(row, data_start, data_end) 
+        #print("ypoints", ypoints) 
+        # Ensure ypoints has exactly squre_size and evenly spaced the data points thru the data set 
+        ypoints_1d_refined = select_points(ypoints_1d, squre_size)
+        
+        #convert ypoints to float
+        ypoints_1d_refined_np = np.array(ypoints_1d_refined, dtype=float)
+        #convert to 2D matrix
+        ypoints_2d_refined_np = convert_1d_matrix_to_2d_matrix(ypoints_1d_refined_np) 
+
+        #conver matrix to image
+        #save a a png file at data/{symbol}/{symbol}_{sample_counter}.png
+        matrix_to_image(ypoints_2d_refined_np, f"./data/{symbol}_{sample_counter}.png") 
+
+        #if the symbol changes from the last reset sample counter
+        if symbol != last_symbol and last_symbol is not None:
+            sample_counter = 0
+
+
+        last_symbol = symbol
+        sample_counter += 1
+        break #used to test and create only 1 image
+    return None
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~miscellaneous~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def extract_class_from_image_name(image_name):
+    # Extract the class from the image name
+    # Assuming the format is like 'class_name_random_dataset_sample_size_45_square_map_ID1.png'
+    parts = image_name.split('_')
+    if len(parts) > 0:
+        class_name = parts[0]
+        return class_name
+    return None
+
+def main(): 
+    #extract_data()    
+    path = './data/HS_data_for_analysis.csv'  
+    data = pd.read_csv(path)  
+    #sort data by USDA Symbol
+    data = data.sort_values(by=['USDA Symbol'])      
+    x,a,b = extract_wavelength(data) 
+    y = np.array(extract_reflectance_from_row(data.iloc[0], a, b))  
+    x = np.array(x)
+    print(y.size, x.size)   
+    #plot_wavelength(data,'USDA Symbol', 400, 2424) 
+    #dataset_genration 
+    #principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data), 20)        
+    
+
+if __name__ == "__main__":
+    main()
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~old code~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"""
+
+
+def create_images_from_data(data, ID, all = False, squre_size = 45, sort_term='USDA Symbol', data_start=1):
+    
+    class_samples = dataset_genration(data, all, squre_size, sort_term, data_start)
+
+    for key, value in class_samples.items(): 
+        #print("HERE")
+        # Convert the matrix to an image and save it 
+        if all is True:
+            path = f"./data/{key}_whole_dataset_map.png"  
+        else:
+            path = f"./data/{key}_random_dataset_sample_size_{squre_size}_square_map_ID{ID}.png" 
+        matrix_to_image(value, path)  
+        print(f"Image saved for {key} at {path}")  
+        #break #used to test and create only 1 image 
+    return None
+
 def create_even_spaced_data_set(data, sort_term='USDA Symbol', data_start=1, all = False, data_len=45, toggle_norm = False, toggle_float_conversion=True ): 
     data = data.sort_values(by=[sort_term])
     token_Symbol_sample_no_dic =  count_samples_by_symbol(data, sort_term) 
@@ -219,60 +343,7 @@ def dataset_genration_2d(data, all = False, squre_size = 45, sort_term='USDA Sym
         return class_matrix_dic    
     return None   
 
-
-def matrix_to_image(matrix, output_path): #, mode_type='L'
-    #reshape matrix data into 2D grey image     
-    # Normalize the matrix values to the range [0, 255]
-    normalized_matrix = (matrix - np.min(matrix)) / (np.max(matrix) - np.min(matrix)) * 255
-    normalized_matrix = normalized_matrix.astype(np.uint8)  # Convert to unsigned 8-bit integer
-    # Create an image from the normalized matrix
-    image = Image.fromarray(normalized_matrix, mode='L')  # 'L' mode is for grayscale images
-    # Save the image as a PNG file
-    image.save(output_path)
-    #print("Image saved at", output_path)
-
-#ID allows multiple images to be created with different names loop over create_image_from_data 
-def create_image_from_data(data, ID, all = False, squre_size = 45, sort_term='USDA Symbol', data_start=1):
-    
-    random_matrix_rows_dic = dataset_genration_2d(data, all, squre_size, sort_term, data_start)
-
-    for key, value in random_matrix_rows_dic.items(): 
-        #print("HERE")
-        # Convert the matrix to an image and save it 
-        if all is True:
-            path = f"./data/{key}_whole_dataset_map.png"  
-        else:
-            path = f"./data/{key}_random_dataset_sample_size_{squre_size}_square_map_ID{ID}.png" 
-        matrix_to_image(value, path)  
-        print(f"Image saved for {key} at {path}")  
-        #break #used to test and create only 1 image 
-    return None
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~miscellaneous~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def extract_class_from_image_name(image_name):
-    # Extract the class from the image name
-    # Assuming the format is like 'class_name_random_dataset_sample_size_45_square_map_ID1.png'
-    parts = image_name.split('_')
-    if len(parts) > 0:
-        class_name = parts[0]
-        return class_name
-    return None
-
-def main():
-    #extract_data()   
-    path = './data/HS_data_for_analysis.csv' 
-    data = pd.read_csv(path)  
-    #sort data by USDA Symbol
-    data = data.sort_values(by=['USDA Symbol'])      
-
-    #principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data), 20)     
-    #create_image_from_data(data, True)   
-    #plot_wavelength(data,'USDA Symbol')
-
-if __name__ == "__main__":
-    main()
-
-
+"""
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~junk code~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
             #print( "[data_matrix]",data_matrix)   

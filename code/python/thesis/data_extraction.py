@@ -61,7 +61,6 @@ def extract_data(sample_token = 'USDA Symbol',
     #remove all data colums that are not sample_token or a int 
     data = data.loc[:, data.columns.isin([sample_token]) | data.columns.str.isnumeric()]
 
-
     data.to_csv(path, index=False)  
     return data, token_Symbol_for_analysis
 
