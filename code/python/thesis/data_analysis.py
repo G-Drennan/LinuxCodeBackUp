@@ -26,17 +26,17 @@ def extract_reflectance_from_row(data, data_start, data_end, toggle_float_conver
     return ypoints
 
 def extract_wavelength(data, min_wavelength = 0, max_wavelength = 2500, data_start=1): 
-    xpoints = list(data)
-    xpoints = xpoints[data_start:]   
-    if min_wavelength == 0: #all the data is used
-        min_wavelength_index = data_start
-        max_wavelength_index = len(data) 
+    xpoints_data = list(data)
+    xpoints = xpoints_data[data_start:]   
+    if min_wavelength == 0: #all the data is used 
+        min_wavelength_index = xpoints_data.index(xpoints[0]) #data_start 
+        max_wavelength_index = xpoints_data.index(xpoints[-1])+1#len(xpoints_data) 
         return xpoints, min_wavelength_index, max_wavelength_index #-1 throws an error as their is no min_wave_index  
     else: #ensure the xpoints are above or equal to min_wavelength 
         xpoints_restricted_wavelength = [x for x in xpoints if x.isnumeric() and int(x) >= min_wavelength and int(x) <= max_wavelength]
-        #count how far along xpoints the min_wavelength is
-        min_wavelength_index = xpoints.index(xpoints_restricted_wavelength[0])
-        max_wavelength_index = xpoints.index(xpoints_restricted_wavelength[-1]) 
+        #count how far along data the wavelength is 
+        min_wavelength_index = xpoints_data.index(xpoints_restricted_wavelength[0]) 
+        max_wavelength_index = xpoints_data.index(xpoints_restricted_wavelength[-1])+1 
         return xpoints_restricted_wavelength, min_wavelength_index, max_wavelength_index 
 
 def extract_class_coloum(data, sort_term='USDA Symbol', data_start=1):
@@ -57,11 +57,15 @@ def plot_wavelength(data, sort_term, min_wavelength = 0, max_wavelength = 2500, 
 
    #the x values are in the header of the data frame 
     xpoints, data_start, data_end = extract_wavelength(data, min_wavelength, max_wavelength, data_start) 
-    data_start +=1  
     #print(xpoints, data_start) 
     #for every row in data, add new USDA Symbol to a dic and count them if they aleard exist
 
     Symbol_sample_count = count_samples_by_symbol(data,sort_term) 
+
+
+    # Ensure the output directory exists
+    output_dir = './data/reflectance_v_wavelength/'
+    os.makedirs(output_dir, exist_ok=True) 
 
     # Initialize variables for plotting
     last_symbol = None
@@ -71,7 +75,7 @@ def plot_wavelength(data, sort_term, min_wavelength = 0, max_wavelength = 2500, 
         symbol = row[sort_term] 
         
         ypoints = extract_reflectance_from_row(row, data_start, data_end) 
-
+ 
         if symbol != last_symbol and last_symbol is not None:
             # Show the current figure and start a new one
             plt.title(f"{sort_term}: {last_symbol}")
@@ -83,9 +87,9 @@ def plot_wavelength(data, sort_term, min_wavelength = 0, max_wavelength = 2500, 
             plt.text(0.75, 0.75, f"Samples: {Symbol_sample_count[last_symbol]}", fontsize=12, ha='left', va='top', transform=plt.gca().transAxes)
             
             #save plot as a png file
-            plt.savefig(f'./data/{last_symbol}_wavelenght_reflectance_plot.png')
+            plt.savefig(f'{output_dir}{last_symbol}_wavelenght_reflectance_plot.png')
             plt.show()
-            plt.figure()  
+            plt.figure()   
             
         # Plot the data
         plt.plot(xpoints, ypoints, label=f"Sample {index}")
@@ -99,7 +103,7 @@ def plot_wavelength(data, sort_term, min_wavelength = 0, max_wavelength = 2500, 
         plt.xticks(np.arange(0, len(xpoints), len(xpoints)/10), fontsize=8) 
         plt.text(0.75, 0.75, f"Samples: {Symbol_sample_count[last_symbol]}", fontsize=12, ha='left', va='top', transform=plt.gca().transAxes)
         
-        plt.savefig(f'./data/reflectance_v_wavelength/{last_symbol}_wavelenght_reflectance_plot.png')
+        plt.savefig(f'{output_dir}{last_symbol}_wavelenght_reflectance_plot.png')
         plt.show()  
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~PCA~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -163,11 +167,9 @@ def matrix_to_image(matrix, output_path, mode='L'): #, mode_type='L'
 
 #ID allows multiple images to be created with different names loop over create_image_from_data 
 def convert_1d_matrix_to_2d_matrix(matrix, squre_size = 45):
-    # Convert a 1D reflectance matrix to a 2D grayscale image and save it.
-    #:param matrix: The input 1D matrix (e.g., reflectance data).
-    #:param output_path: The path to save the image.
+
     # Flatten the matrix to ensure it's 1D
-    flattened_matrix = matrix.flatten()
+    flattened_matrix = matrix.flatten() 
     # Reshape the 1D data into a 45 × 45 2D array 
     reshaped_matrix = flattened_matrix[:(squre_size*squre_size)].reshape((squre_size, squre_size))
 
@@ -185,7 +187,11 @@ def dataset_genration(data, min_wavelength, max_wavelength, squre_size = 45,  da
     xpoints, data_start, data_end = extract_wavelength(data, min_wavelength, max_wavelength, data_start) 
     sample_counter = 0
     last_symbol = None
+
     for index, row in data.iterrows():
+        if index is 0:
+            output_dir = './data/{symbol}_dataset/'
+            os.makedirs(output_dir, exist_ok=True) 
         symbol = row[sort_term] 
         #print("symbol", symbol)
         ypoints_1d = extract_reflectance_from_row(row, data_start, data_end) 
@@ -198,18 +204,21 @@ def dataset_genration(data, min_wavelength, max_wavelength, squre_size = 45,  da
         #convert to 2D matrix
         ypoints_2d_refined_np = convert_1d_matrix_to_2d_matrix(ypoints_1d_refined_np) 
 
-        #conver matrix to image
-        #save a a png file at data/{symbol}/{symbol}_{sample_counter}.png
-        matrix_to_image(ypoints_2d_refined_np, f"./data/{symbol}_{sample_counter}.png") 
 
         #if the symbol changes from the last reset sample counter
         if symbol != last_symbol and last_symbol is not None:
             sample_counter = 0
+            output_dir = './data/{symbol}_dataset/'
+            os.makedirs(output_dir, exist_ok=True)
+         
+        #conver matrix to image
+        #save a a png file at data/{symbol}/{symbol}_{sample_counter}.png
+        matrix_to_image(ypoints_2d_refined_np, f"{output_dir}{symbol}_{sample_counter}.png") 
 
 
         last_symbol = symbol
         sample_counter += 1
-        break #used to test and create only 1 image
+        break #used to test and create only 1 image 
     return None
 
 
@@ -229,12 +238,12 @@ def main():
     data = pd.read_csv(path)  
     #sort data by USDA Symbol
     data = data.sort_values(by=['USDA Symbol'])      
-    x,a,b = extract_wavelength(data) 
-    y = np.array(extract_reflectance_from_row(data.iloc[0], a, b))  
-    x = np.array(x)
-    print(y.size, x.size)   
+    #x,a,b = extract_wavelength(data, 400, 2424)# , 400, 2424)  
+    #y = np.array(extract_reflectance_from_row(data.iloc[0], a, b))    
+    #x = np.array(x) 
+    #print(y.size, x.size, a, b)      
     #plot_wavelength(data,'USDA Symbol', 400, 2424) 
-    #dataset_genration 
+    dataset_genration(data, 400,2424) 
     #principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data), 20)        
     
 
