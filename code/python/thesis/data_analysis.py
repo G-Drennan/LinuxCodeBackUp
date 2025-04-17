@@ -4,6 +4,7 @@ import os
 #lib to read in csv files  
 import pandas as pd
 from PIL import Image  # Add this import for image processing
+import math
 
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
@@ -166,49 +167,57 @@ def matrix_to_image(matrix, output_path, mode='L'): #, mode_type='L'
     return output_path
 
 #ID allows multiple images to be created with different names loop over create_image_from_data 
-def convert_1d_matrix_to_2d_matrix(matrix, squre_size = 45):
+def convert_1d_arr_to_2d_matrix(arr_np):
 
-    # Flatten the matrix to ensure it's 1D
-    flattened_matrix = matrix.flatten() 
-    # Reshape the 1D data into a 45 × 45 2D array 
-    reshaped_matrix = flattened_matrix[:(squre_size*squre_size)].reshape((squre_size, squre_size))
+    len_arr = arr_np.size
+    print("len_arr", len_arr) 
+    # check if the len is a perfrect square, if it is store the square root in a variable
+    if math.sqrt(len_arr) % 1 == 0:
+        square_root_len = int(math.sqrt(len_arr))
+    else:
+        print("len_arr is not a perfect square, taking lengths away from the end of the array until it is a perfect square")
+        #takes lenghts away from the end of the array until it is a perfect square 
+        count_len_taken = 0
+        while math.sqrt(len_arr) % 1 != 0: 
+            arr_np = arr_np[:-1]
+            len_arr = arr_np.size
+            count_len_taken += 1
+        square_root_len = int(math.sqrt(len_arr)) 
+        print("len_arr is a perfect square, after taking away", count_len_taken, "lengths from the end of the array")
+        print("square of len_arr is", square_root_len) 
+        len_arr = arr_np.size
+        print("len_arr", len_arr)  
 
-    return reshaped_matrix 
+    # Reshape the 1D data into a 2D square array  
+    reshaped_matrix = arr_np.reshape((square_root_len, square_root_len))
 
-def select_points(ypoints, squre_size):
-    # Ensure ypoints has exactly squre_size and evenly spaced the data points thru the data set 
-    if len(ypoints) > squre_size:
-        ypoints = np.linspace(ypoints[0], ypoints[-1], squre_size)
-    elif len(ypoints) < squre_size:
-        raise ValueError("ypoints is less than squre_size")
-    return ypoints
+    return reshaped_matrix  
 
-def dataset_genration(data, min_wavelength, max_wavelength, squre_size = 45,  data_start = 1,  sort_term = 'USDA Symbol'):
+
+def dataset_genration(data, min_wavelength, max_wavelength,  data_start = 1,  sort_term = 'USDA Symbol'): 
     xpoints, data_start, data_end = extract_wavelength(data, min_wavelength, max_wavelength, data_start) 
+
     sample_counter = 0
     last_symbol = None
 
     for index, row in data.iterrows():
+        symbol = row[sort_term]   
         if index is 0:
-            output_dir = './data/{symbol}_dataset/'
+            output_dir = f'./data/{symbol}_dataset/'
             os.makedirs(output_dir, exist_ok=True) 
-        symbol = row[sort_term] 
-        #print("symbol", symbol)
+        
         ypoints_1d = extract_reflectance_from_row(row, data_start, data_end) 
-        #print("ypoints", ypoints) 
-        # Ensure ypoints has exactly squre_size and evenly spaced the data points thru the data set 
-        ypoints_1d_refined = select_points(ypoints_1d, squre_size)
         
         #convert ypoints to float
-        ypoints_1d_refined_np = np.array(ypoints_1d_refined, dtype=float)
+        ypoints_1d_refined_np = np.array(ypoints_1d, dtype=float)
         #convert to 2D matrix
-        ypoints_2d_refined_np = convert_1d_matrix_to_2d_matrix(ypoints_1d_refined_np) 
+        ypoints_2d_refined_np = convert_1d_arr_to_2d_matrix(ypoints_1d_refined_np) 
 
 
         #if the symbol changes from the last reset sample counter
         if symbol != last_symbol and last_symbol is not None:
             sample_counter = 0
-            output_dir = './data/{symbol}_dataset/'
+            output_dir = f'./data/{symbol}_dataset/'
             os.makedirs(output_dir, exist_ok=True)
          
         #conver matrix to image
@@ -357,6 +366,15 @@ def dataset_genration_2d(data, all = False, squre_size = 45, sort_term='USDA Sym
 
             #print( "[data_matrix]",data_matrix)   
             #print the last row of  data_matrix 
+
+'''def select_points(ypoints, squre_size):
+    # Ensure ypoints has exactly squre_size and evenly spaced the data points thru the data set 
+    if len(ypoints) > squre_size:
+        ypoints = np.linspace(ypoints[0], ypoints[-1], squre_size)
+    elif len(ypoints) < squre_size:
+        raise ValueError("ypoints is less than squre_size")
+    return ypoints'''
+
 """
             print( "[data_matrix_LAST]",data_matrix[-1,:]) 
             print("LAST == last entered", ypoints == data_matrix[-1,:]) 
