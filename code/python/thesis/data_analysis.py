@@ -227,7 +227,7 @@ def dataset_genration(data, min_wavelength, max_wavelength,  data_start = 1,  so
 
         last_symbol = symbol
         sample_counter += 1
-        break #used to test and create only 1 image 
+        #break #used to test and create only 1 image  
     return None
 
 
