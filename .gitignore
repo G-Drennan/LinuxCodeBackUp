@@ -4,5 +4,4 @@ test.py
 test.png
 __pycache__/  
 #ignore the folder MTRX5700
-MTRX5700/ 
-test/ 
+MTRX5700/  
