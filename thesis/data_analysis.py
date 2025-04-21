@@ -5,6 +5,7 @@ import os
 import pandas as pd
 from PIL import Image  # Add this import for image processing
 import math
+import cv2 as cv
 
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
@@ -157,7 +158,7 @@ def principal_component_analysis(xpoints, ypoints, n_components = 45):
 def matrix_to_image(matrix, output_path, mode='L'): #, mode_type='L'
     #reshape matrix data into 2D grey image     
     # Normalize the matrix values to the range [0, 255]
-    normalized_matrix = (matrix - np.min(matrix)) / (np.max(matrix) - np.min(matrix)) * 255
+    normalized_matrix = cv.normalize(matrix, None, 0, 255, cv.NORM_MINMAX) 
     normalized_matrix = normalized_matrix.astype(np.uint8)  # Convert to unsigned 8-bit integer
     # Create an image from the normalized matrix
     image = Image.fromarray(normalized_matrix, mode)  # 'L' mode is for grayscale images
@@ -238,7 +239,7 @@ def extract_class_from_image_name(image_name):
     parts = image_name.split('_')
     if len(parts) > 0:
         class_name = parts[0]
-        return class_name
+        return class_name 
     return None
 
 def main(): 
@@ -250,8 +251,11 @@ def main():
     #x,a,b = extract_wavelength(data, 400, 2424)# , 400, 2424)  
     #y = np.array(extract_reflectance_from_row(data.iloc[0], a, b))    
     #x = np.array(x) 
-    #print(y.size, x.size, a, b)      
-    #plot_wavelength(data,'USDA Symbol', 400, 2424) 
+    #print(y.size, x.size, a, b)    
+    #print("xpoints", x)
+    #print("ypoints", y) 
+
+    plot_wavelength(data,'USDA Symbol', 400, 2424) 
     dataset_genration(data, 400,2424) 
     #principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data), 20)        
     
