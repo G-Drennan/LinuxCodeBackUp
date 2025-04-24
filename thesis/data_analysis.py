@@ -198,9 +198,6 @@ def dataset_genration(data, min_wavelength, max_wavelength,  data_start = 1,  so
         #break #used to test and create only 1 image  
     return None
 
-
-
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~miscellaneous~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def extract_class_from_image_name(image_name):
     # Extract the class from the image name
@@ -227,9 +224,6 @@ def main():
     #plot_wavelength(data,'USDA Symbol', 400, 2424) 
     #dataset_genration(data, 400,2424) 
 
-    # Perform ANOVA
-    significant_features_dict = Anova_feature_selection(data)
-    plot_Anova(significant_features_dict)
     #for key, value in significant_features.items():  # Use .items() to iterate over key-value pairs
         #print(f"Class: {key}")
 
@@ -241,6 +235,116 @@ if __name__ == "__main__":
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~old code~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
+
+
+def create_data_dict_by_class(data, wavelength_min = 300, wavelenght_max = 2500, sort_term='USDA Symbol', data_start=1, toggle_norm = False, toggle_float_conversion=True ): 
+    data = data.sort_values(by=[sort_term])
+    token_Symbol_sample_no_dic =  count_samples_by_symbol(data, sort_term) 
+    print(token_Symbol_sample_no_dic)  
+    #find len of data from data_start to end of data 
+    data_len = len(data.iloc[data_start:])
+    
+    #create a matrix of zeros with the same dimenatsion as data
+    data_matrix = np.zeros((len(data), data_len)) 
+
+    xpoints, data_start, data_end = extract_wavelength(data, wavelength_min, wavelenght_max, data_start) 
+     
+    #make a dic for each token_Symbol_for_analysis
+    token_symbol_of_matixs = {}
+    last_symbol = None
+    overall_index = 0 
+    for index, row in data.iterrows():
+
+        symbol = row[sort_term] 
+        if symbol != last_symbol and last_symbol is not None:
+            
+            
+            #add matrix to dic
+            token_symbol_of_matixs[last_symbol] = data_matrix 
+
+            #reset matrix
+            data_matrix = np.zeros((token_Symbol_sample_no_dic[symbol],  data_len))  
+            overall_index = index  
+
+        if last_symbol is None:
+            #reduce the  matrix to the size of token_Symbol_sample_no_dic[last_symbol]
+            data_matrix = np.zeros((token_Symbol_sample_no_dic[symbol], data_len)) 
+
+        # Ensure xpoints and ypoints are 1D arrays for plotting
+        ypoints = extract_reflectance_from_row(row, data_start, data_end)  
+
+        # Ensure ypoints has exactly data_len and evenly spaced the data points thru the data set 
+        ypoints = np.linspace(ypoints[0], ypoints[-1], data_len)
+        
+        #convert ypoints to float
+        if toggle_float_conversion is True:
+            ypoints = np.array(ypoints, dtype=float)
+        
+        #normalize ypoints
+        if toggle_norm is True:
+            ypoints = ((ypoints - np.min(ypoints)) / (np.max(ypoints) - np.min(ypoints)))
+        
+        #add ypoints to matrix
+        data_matrix[index-overall_index] = ypoints 
+        
+        last_symbol = symbol
+
+    return token_symbol_of_matixs 
+
+def find_mean_of_matrix_col(matrix):
+    if not isinstance(matrix, np.ndarray):
+        raise ValueError("Input must be a NumPy array.")
+    if len(matrix.shape) != 2:
+        raise ValueError("Input must be a 2D matrix.")
+
+    # Calculate the mean of each column
+    column_means = np.mean(matrix, axis=0)
+    return column_means
+
+def find_std_of_matrix_col(matrix):
+    if not isinstance(matrix, np.ndarray):
+        raise ValueError("Input must be a NumPy array.")
+    if len(matrix.shape) != 2:
+        raise ValueError("Input must be a 2D matrix.")
+
+    # Calculate the standard deviation of each column
+    column_stds = np.std(matrix, axis=0) 
+    return column_stds
+
+def data_analysis(data, wavelength_min = 300, wavelenght_max = 2500, sort_term='USDA Symbol', data_start=1):
+    class_data_dict = create_data_dict_by_class(data, wavelength_min, wavelenght_max, sort_term, data_start)
+
+    class_data_dict_mean_std = {}
+    for each_class_key, value in class_data_dict.items(): 
+        mean = find_mean_of_matrix_col(value) 
+        std = find_std_of_matrix_col(value)
+        class_data_dict_mean_std[each_class_key] = (mean, std)  
+    #print(class_data_dict_mean_std) 
+    xpoints = np.linspace(wavelength_min, wavelenght_max, len(next(iter(class_data_dict_mean_std.values()))[0]))
+  
+     # Plot the mean reflectance for each class
+    for class_label, (mean, std) in class_data_dict_mean_std.items():
+        plt.plot(xpoints, mean, label=f"Class: {class_label}")
+
+    # Configure the plot
+    plt.xlabel('Wavelength (nm)')
+    plt.ylabel('Mean Reflectance')
+    plt.title('Mean Reflectance vs Wavelength for Each Class')
+    plt.legend(loc='upper right')
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.tight_layout()
+
+    # Save the plot
+    output_dir = './data/mean_reflectance_plots/'
+    os.makedirs(output_dir, exist_ok=True)
+    plot_path = f'{output_dir}mean_reflectance_plot.png'
+    plt.savefig(plot_path)
+    plt.close()
+    print(f"Mean reflectance plot saved at {plot_path}")
+
+
+
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Anova~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
