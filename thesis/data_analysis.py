@@ -6,6 +6,7 @@ import pandas as pd
 from PIL import Image  # Add this import for image processing
 import math
 import cv2 as cv
+from scipy.stats import f_oneway
 
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
@@ -47,10 +48,18 @@ def extract_class_coloum(data, sort_term='USDA Symbol', data_start=1):
     class_coloum = data[sort_term].values.tolist()
     return class_coloum
 
-def extract_reflectance(data, data_start=1):
-    #extract the data from the data frame 
-    data = data.iloc[:, data_start:]  
+def extract_reflectance(data, data_start, data_end):
+
+    data = data.iloc[:, data_start:data_end]   
+
     return data 
+
+def extract_class_coloum(data, sort_term='USDA Symbol'):
+    if sort_term in data.columns:
+        return data[sort_term].tolist() 
+    else:
+        raise ValueError(f"Column '{sort_term}' not found in the DataFrame.")
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Plotting the data~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def plot_wavelength(data, sort_term, min_wavelength = 0, max_wavelength = 2500, data_start=1):
@@ -72,6 +81,8 @@ def plot_wavelength(data, sort_term, min_wavelength = 0, max_wavelength = 2500, 
     # Initialize variables for plotting
     last_symbol = None
     plt.figure()
+    x_label = 'Wavelength (nm)'
+    y_label = 'Reflectance'
 
     for index, row in data.iterrows(): 
         symbol = row[sort_term] 
@@ -81,8 +92,8 @@ def plot_wavelength(data, sort_term, min_wavelength = 0, max_wavelength = 2500, 
         if symbol != last_symbol and last_symbol is not None:
             # Show the current figure and start a new one
             plt.title(f"{sort_term}: {last_symbol}")
-            plt.xlabel('Wavelength')
-            plt.ylabel('Reflectance')
+            plt.xlabel(x_label)
+            plt.ylabel(y_label)
             #reduce the number of ticks on the x axis
             plt.xticks(np.arange(0, len(xpoints), len(xpoints)/10), fontsize=8)
             # display Symbol_sample_count(last_symbol) on the figure top left
@@ -90,7 +101,7 @@ def plot_wavelength(data, sort_term, min_wavelength = 0, max_wavelength = 2500, 
             
             #save plot as a png file
             plt.savefig(f'{output_dir}{last_symbol}_wavelenght_reflectance_plot.png')
-            plt.show()
+            #plt.show() 
             plt.figure()   
             
         # Plot the data
@@ -100,13 +111,200 @@ def plot_wavelength(data, sort_term, min_wavelength = 0, max_wavelength = 2500, 
     # Show the last figure
     if last_symbol is not None:
         plt.title(f"{sort_term}: {last_symbol}")
-        plt.xlabel('Wavelength')
-        plt.ylabel('Reflectance')
+        plt.xlabel(x_label)
+        plt.ylabel(y_label) 
         plt.xticks(np.arange(0, len(xpoints), len(xpoints)/10), fontsize=8) 
         plt.text(0.75, 0.75, f"Samples: {Symbol_sample_count[last_symbol]}", fontsize=12, ha='left', va='top', transform=plt.gca().transAxes)
         
         plt.savefig(f'{output_dir}{last_symbol}_wavelenght_reflectance_plot.png')
-        plt.show()  
+        #plt.show()  
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Data set generation~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+def matrix_to_image(matrix, output_path, mode='L'): #, mode_type='L'
+    #reshape matrix data into 2D grey image     
+    # Normalize the matrix values to the range [0, 255]
+    normalized_matrix = cv.normalize(matrix, None, 0, 255, cv.NORM_MINMAX) 
+    normalized_matrix = normalized_matrix.astype(np.uint8)  # Convert to unsigned 8-bit integer
+    # Create an image from the normalized matrix
+    image = Image.fromarray(normalized_matrix, mode)  # 'L' mode is for grayscale images
+    # Save the image as a PNG file
+    image.save(output_path)
+    #print("Image saved at", output_path)
+    return output_path
+
+#ID allows multiple images to be created with different names loop over create_image_from_data 
+def convert_1d_arr_to_2d_matrix(arr_np):
+
+    len_arr = arr_np.size
+    #print("len_arr", len_arr)  
+    # check if the len is a perfrect square, if it is store the square root in a variable
+    if math.sqrt(len_arr) % 1 == 0:
+        square_root_len = int(math.sqrt(len_arr))
+    else:
+        print("len_arr is not a perfect square, taking lengths away from the end of the array until it is a perfect square")
+        #takes lenghts away from the end of the array until it is a perfect square 
+        count_len_taken = 0
+        while math.sqrt(len_arr) % 1 != 0: 
+            arr_np = arr_np[:-1]
+            len_arr = arr_np.size
+            count_len_taken += 1
+        square_root_len = int(math.sqrt(len_arr)) 
+        print("len_arr is a perfect square, after taking away", count_len_taken, "lengths from the end of the array")
+        print("square of len_arr is", square_root_len) 
+        len_arr = arr_np.size
+        print("len_arr", len_arr)  
+
+    # Reshape the 1D data into a 2D square array  
+    reshaped_matrix = arr_np.reshape((square_root_len, square_root_len))
+
+    return reshaped_matrix  
+
+
+def dataset_genration(data, min_wavelength, max_wavelength,  data_start = 1,  sort_term = 'USDA Symbol'): 
+    xpoints, data_start, data_end = extract_wavelength(data, min_wavelength, max_wavelength, data_start) 
+
+    sample_counter = 0 
+    last_symbol = None
+
+    for index, row in data.iterrows():
+        symbol = row[sort_term]   
+        if index is 0:
+            output_dir = f'./data/{symbol}_dataset/'
+            os.makedirs(output_dir, exist_ok=True) 
+        
+        ypoints_1d = extract_reflectance_from_row(row, data_start, data_end) 
+        
+        #convert ypoints to float
+        ypoints_1d_refined_np = np.array(ypoints_1d, dtype=float)
+        #convert to 2D matrix
+        ypoints_2d_refined_np = convert_1d_arr_to_2d_matrix(ypoints_1d_refined_np) 
+
+
+        #if the symbol changes from the last reset sample counter
+        if symbol != last_symbol and last_symbol is not None:
+            sample_counter = 0
+            output_dir = f'./data/{symbol}_dataset/'
+            os.makedirs(output_dir, exist_ok=True)
+         
+        #conver matrix to image
+        #save a a png file at data/{symbol}/{symbol}_{sample_counter}.png
+        matrix_to_image(ypoints_2d_refined_np, f"{output_dir}{symbol}_{sample_counter}.png") 
+
+
+        last_symbol = symbol
+        sample_counter += 1
+        #break #used to test and create only 1 image  
+    return None
+
+
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~miscellaneous~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def extract_class_from_image_name(image_name):
+    # Extract the class from the image name
+    # Assuming the format is like 'class_name_random_dataset_sample_size_45_square_map_ID1.png'
+    parts = image_name.split('_')
+    if len(parts) > 0:
+        class_name = parts[0]
+        return class_name 
+    return None
+
+def main(): 
+    #extract_data()    
+    path = './data/HS_data_for_analysis.csv'  
+    data = pd.read_csv(path)  
+    #sort data by USDA Symbol
+    data = data.sort_values(by=['USDA Symbol'])      
+    #x,a,b = extract_wavelength(data, 400, 2424)# , 400, 2424)  
+    #y = np.array(extract_reflectance_from_row(data.iloc[0], a, b))    
+    #x = np.array(x) 
+    #print(y.size, x.size, a, b)    
+    #print("xpoints", x)
+    #print("ypoints", y) 
+
+    #plot_wavelength(data,'USDA Symbol', 400, 2424) 
+    #dataset_genration(data, 400,2424) 
+
+    # Perform ANOVA
+    significant_features_dict = Anova_feature_selection(data)
+    plot_Anova(significant_features_dict)
+    #for key, value in significant_features.items():  # Use .items() to iterate over key-value pairs
+        #print(f"Class: {key}")
+
+    #principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data), 20)        
+    
+
+if __name__ == "__main__":
+    main()
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~old code~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"""
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Anova~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def Anova_feature_selection(data): 
+    #data: header, wavelenght 300-2500
+    #      class , reflectance for each wavelength
+
+    x_points, data_start, data_end = extract_wavelength(data, 400, 2424) 
+    y_points = extract_reflectance(data, data_start, data_end)
+    class_col = extract_class_coloum(data) 
+
+     # Group reflectance data by class
+    grouped_data_dict = {}
+    for label, row in zip(class_col, y_points.values):
+        if label not in grouped_data_dict:
+            grouped_data_dict[label] = []
+        grouped_data_dict[label].append(row)
+
+    # Perform ANOVA for each wavelength
+    significant_features_dict = {}
+    for i, wavelength in enumerate(x_points):
+        # Collect reflectance values for this wavelength across all classes
+        wavelength_data = [np.array(group)[:, i] for group in grouped_data_dict.values()]
+        
+        # Perform one-way ANOVA
+        f_value, p_value = f_oneway(*wavelength_data)
+        
+        # Store results for each class
+        for class_label in grouped_data_dict.keys(): 
+            if class_label not in significant_features_dict:
+                significant_features_dict[class_label] = []
+            significant_features_dict[class_label].append((wavelength, p_value, f_value))
+
+    # Sort results by p-value for each class
+    for class_label in significant_features_dict:
+        significant_features_dict[class_label].sort(key=lambda x: x[1])  # Sort by p-value (ascending)
+
+    return significant_features_dict
+
+def plot_Anova(significant_features):
+    # Create an output directory for the plots
+    output_dir = './data/anova_plots/'
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Plot p-values for each class
+    for class_label, features in significant_features.items():
+        wavelengths = [f[0] for f in features]
+        p_values = [f[1] for f in features]
+        plt.plot(wavelengths, p_values, label=f"Class: {class_label}")
+
+    # Configure the plot
+    plt.xlabel('Wavelength (nm)')
+    plt.ylabel('p-value')
+    plt.title('ANOVA p-values for Wavelengths by Class')
+    plt.yscale('log')  # Use a logarithmic scale for better visualization of small p-values
+    plt.legend(loc='upper right')
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.tight_layout()
+
+    # Save the plot
+    plot_path = f'{output_dir}anova_p_values_line_plot.png'
+    plt.savefig(plot_path)
+    plt.close()
+    print(f"Line plot saved at {plot_path}")
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~PCA~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def principal_component_analysis(xpoints, ypoints, n_components = 45):
@@ -152,119 +350,6 @@ def principal_component_analysis(xpoints, ypoints, n_components = 45):
 
     #find the PC wavelengths that have the highest loadings
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Data set generation~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-def matrix_to_image(matrix, output_path, mode='L'): #, mode_type='L'
-    #reshape matrix data into 2D grey image     
-    # Normalize the matrix values to the range [0, 255]
-    normalized_matrix = cv.normalize(matrix, None, 0, 255, cv.NORM_MINMAX) 
-    normalized_matrix = normalized_matrix.astype(np.uint8)  # Convert to unsigned 8-bit integer
-    # Create an image from the normalized matrix
-    image = Image.fromarray(normalized_matrix, mode)  # 'L' mode is for grayscale images
-    # Save the image as a PNG file
-    image.save(output_path)
-    #print("Image saved at", output_path)
-    return output_path
-
-#ID allows multiple images to be created with different names loop over create_image_from_data 
-def convert_1d_arr_to_2d_matrix(arr_np):
-
-    len_arr = arr_np.size
-    print("len_arr", len_arr) 
-    # check if the len is a perfrect square, if it is store the square root in a variable
-    if math.sqrt(len_arr) % 1 == 0:
-        square_root_len = int(math.sqrt(len_arr))
-    else:
-        print("len_arr is not a perfect square, taking lengths away from the end of the array until it is a perfect square")
-        #takes lenghts away from the end of the array until it is a perfect square 
-        count_len_taken = 0
-        while math.sqrt(len_arr) % 1 != 0: 
-            arr_np = arr_np[:-1]
-            len_arr = arr_np.size
-            count_len_taken += 1
-        square_root_len = int(math.sqrt(len_arr)) 
-        print("len_arr is a perfect square, after taking away", count_len_taken, "lengths from the end of the array")
-        print("square of len_arr is", square_root_len) 
-        len_arr = arr_np.size
-        print("len_arr", len_arr)  
-
-    # Reshape the 1D data into a 2D square array  
-    reshaped_matrix = arr_np.reshape((square_root_len, square_root_len))
-
-    return reshaped_matrix  
-
-
-def dataset_genration(data, min_wavelength, max_wavelength,  data_start = 1,  sort_term = 'USDA Symbol'): 
-    xpoints, data_start, data_end = extract_wavelength(data, min_wavelength, max_wavelength, data_start) 
-
-    sample_counter = 0
-    last_symbol = None
-
-    for index, row in data.iterrows():
-        symbol = row[sort_term]   
-        if index is 0:
-            output_dir = f'./data/{symbol}_dataset/'
-            os.makedirs(output_dir, exist_ok=True) 
-        
-        ypoints_1d = extract_reflectance_from_row(row, data_start, data_end) 
-        
-        #convert ypoints to float
-        ypoints_1d_refined_np = np.array(ypoints_1d, dtype=float)
-        #convert to 2D matrix
-        ypoints_2d_refined_np = convert_1d_arr_to_2d_matrix(ypoints_1d_refined_np) 
-
-
-        #if the symbol changes from the last reset sample counter
-        if symbol != last_symbol and last_symbol is not None:
-            sample_counter = 0
-            output_dir = f'./data/{symbol}_dataset/'
-            os.makedirs(output_dir, exist_ok=True)
-         
-        #conver matrix to image
-        #save a a png file at data/{symbol}/{symbol}_{sample_counter}.png
-        matrix_to_image(ypoints_2d_refined_np, f"{output_dir}{symbol}_{sample_counter}.png") 
-
-
-        last_symbol = symbol
-        sample_counter += 1
-        #break #used to test and create only 1 image  
-    return None
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~miscellaneous~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def extract_class_from_image_name(image_name):
-    # Extract the class from the image name
-    # Assuming the format is like 'class_name_random_dataset_sample_size_45_square_map_ID1.png'
-    parts = image_name.split('_')
-    if len(parts) > 0:
-        class_name = parts[0]
-        return class_name 
-    return None
-
-def main(): 
-    #extract_data()    
-    path = './data/HS_data_for_analysis.csv'  
-    data = pd.read_csv(path)  
-    #sort data by USDA Symbol
-    data = data.sort_values(by=['USDA Symbol'])      
-    #x,a,b = extract_wavelength(data, 400, 2424)# , 400, 2424)  
-    #y = np.array(extract_reflectance_from_row(data.iloc[0], a, b))    
-    #x = np.array(x) 
-    #print(y.size, x.size, a, b)    
-    #print("xpoints", x)
-    #print("ypoints", y) 
-
-    plot_wavelength(data,'USDA Symbol', 400, 2424) 
-    dataset_genration(data, 400,2424) 
-    #principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data), 20)        
-    
-
-if __name__ == "__main__":
-    main()
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~old code~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
 
 
 def create_images_from_data(data, ID, all = False, squre_size = 45, sort_term='USDA Symbol', data_start=1):
