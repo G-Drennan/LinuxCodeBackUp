@@ -267,6 +267,25 @@ if __name__ == "__main__":
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~old code~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
+
+import matplotlib.pyplot as plt
+
+# Extract wavelengths and p-values
+wavelengths = [feature[0] for feature in significant_features]
+p_values = [feature[1] for feature in significant_features]
+
+# Plot p-values
+plt.figure(figsize=(10, 6))
+plt.plot(wavelengths, p_values, label="p-values")
+plt.axhline(y=0.05, color='r', linestyle='--', label="Significance Threshold (p=0.05)")
+plt.xlabel("Wavelength (nm)")
+plt.ylabel("p-value") 
+plt.title("ANOVA p-values for Wavelengths")
+plt.yscale("log")  # Use log scale for better visualization
+plt.legend()
+plt.grid(True)
+plt.show()
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ statstic analysis ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def class_data_dict_gen(data,  min_wavelength = 350, max_wavelength = 2500,  data_start = 1,  sort_term = 'USDA Symbol', toggle_float_conversion = True, toggle_norm = False):
      
