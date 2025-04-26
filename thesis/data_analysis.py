@@ -201,18 +201,111 @@ def dataset_genration(data, min_wavelength, max_wavelength,  data_start = 1,  so
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Analysis ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def anova_feature_selection(data, wavelengths, class_labels):
-    """
-    Perform ANOVA to find significant wavelengths.
+def class_data_dict_gen(data, min_wavelength=350, max_wavelength=2500, data_start=1, sort_term='USDA Symbol', toggle_float_conversion=True, toggle_norm=False):
+    # Sort data by the specified term
+    data = data.sort_values(by=[sort_term])
     
-    :param data: 2D NumPy array where rows are samples and columns are wavelengths.
-    :param wavelengths: List of wavelength values corresponding to the columns of `data`.
-    :param class_labels: List of class labels corresponding to the rows of `data`.
-    :return: List of tuples (wavelength, p-value, F-value) sorted by p-value.
-    """
-    # Group data by class
+    # Extract wavelength range and indices
+    x_points, data_start, data_end = extract_wavelength(data, min_wavelength, max_wavelength, data_start)
+    data_len = data_end - data_start
+
+    # Initialize dictionary to store matrices for each class
+    token_symbol_of_matrices = {}
+
+    # Group data by the sort term
+    grouped_data = data.groupby(sort_term)
+
+    for symbol, group in grouped_data:
+        # Initialize a matrix for the current group
+        data_matrix = np.zeros((len(group), data_len))
+
+        for i, (_, row) in enumerate(group.iterrows()):
+            # Extract reflectance values
+            y_points = extract_reflectance_from_row(row, data_start, data_end)
+
+            # Ensure y_points has exactly data_len and evenly spaced points
+            y_points = np.linspace(y_points[0], y_points[-1], data_len)
+
+            # Convert to float if toggle is enabled
+            if toggle_float_conversion:
+                y_points = np.array(y_points, dtype=float)
+
+            # Normalize if toggle is enabled
+            if toggle_norm:
+                y_points = (y_points - np.min(y_points)) / (np.max(y_points) - np.min(y_points))
+
+            # Add the processed row to the matrix
+            data_matrix[i] = y_points
+
+        # Store the matrix in the dictionary
+        token_symbol_of_matrices[symbol] = data_matrix
+
+    return token_symbol_of_matrices, np.array(x_points, dtype=float)
+
+def anova_analysis(matrix): #features 
+    #featrues are wavelenghts. 
+    #feature values are in cols, if they need to be in rows for analysis transpose the matrix
+    matrix = np.matrix(matrix) 
+    matrix = matrix.transpose()
+    results_p = [] 
+    results_f = []
+    for row in matrix:
+        f_value, p_value = f_oneway(*row)
+        results_p.append(p_value)
+        results_f.append(f_value) 
+
+    return results_p, results_f
+
+def statsitic_analysis(data,  min_wavelength = 350, max_wavelength = 2500,  data_start = 1,  sort_term = 'USDA Symbol'):
+    class_data_dict, wavelengths = class_data_dict_gen(data, min_wavelength, max_wavelength, data_start, sort_term)
+
+    for key, matrix in class_data_dict.items():
+        print(anova_analysis(matrix))
+        break 
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~miscellaneous~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def extract_class_from_image_name(image_name):
+    # Extract the class from the image name
+    # Assuming the format is like 'class_name_random_dataset_sample_size_45_square_map_ID1.png'
+    parts = image_name.split('_')
+    if len(parts) > 0:
+        class_name = parts[0]
+        return class_name 
+    return None
+
+def main():  
+    #extract_data()     
+    path = './data/HS_data_for_analysis.csv'  
+    data = pd.read_csv(path)   
+    #sort data by USDA Symbol
+    data = data.sort_values(by=['USDA Symbol'])      
+    #plot_wavelength(data,'USDA Symbol', 400, 2424) 
+    #dataset_genration(data, 400, 2424)
+
+    statsitic_analysis(data, 400, 2424) 
+     
+    
+
+if __name__ == "__main__":
+    main()
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~old code~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"""
+
+
+def anova_feature_selection(data, wavelengths, sort_term = 'USDA Symbol'):
+    class_labels = data['USDA Symbol'].values
+
+    # Ensure class_labels is a NumPy array and matches the number of rows in data
+    class_labels = np.array(class_labels)
+    if len(class_labels) != len(data):
+        raise ValueError(f"Length of class_labels ({len(class_labels)}) does not match number of rows in data ({len(data)}).")
+    
     unique_classes = np.unique(class_labels)
-    grouped_data = {cls: data[class_labels == cls] for cls in unique_classes}
+    
+    # Group data by class
+    grouped_data = {cls: data[class_labels == cls].iloc[:, 1:].values for cls in unique_classes}
     
     significant_features = []
     
@@ -232,42 +325,6 @@ def anova_feature_selection(data, wavelengths, class_labels):
     
     return significant_features
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~miscellaneous~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def extract_class_from_image_name(image_name):
-    # Extract the class from the image name
-    # Assuming the format is like 'class_name_random_dataset_sample_size_45_square_map_ID1.png'
-    parts = image_name.split('_')
-    if len(parts) > 0:
-        class_name = parts[0]
-        return class_name 
-    return None
-
-def main(): 
-    extract_data()    
-    path = './data/HS_data_for_analysis.csv'  
-    data = pd.read_csv(path)  
-    #sort data by USDA Symbol
-    data = data.sort_values(by=['USDA Symbol'])      
-    #plot_wavelength(data,'USDA Symbol', 400, 2424) 
-    #dataset_genration(data, 400, 2424)
-    class_labels = return_class_lables(data) 
-    wavelengths = extract_wavelength(data) 
-
-    significant_features = anova_feature_selection(data, wavelengths, class_labels)
-
-    # Print top 10 significant wavelengths
-    for wavelength, p_value, f_value in significant_features[:10]:
-        print(f"Wavelength: {wavelength} nm, p-value: {p_value:.5f}, F-value: {f_value:.2f}")
-
-     
-    
-
-if __name__ == "__main__":
-    main()
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~old code~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
-
 import matplotlib.pyplot as plt
 
 # Extract wavelengths and p-values
@@ -286,127 +343,6 @@ plt.legend()
 plt.grid(True)
 plt.show()
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ statstic analysis ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def class_data_dict_gen(data,  min_wavelength = 350, max_wavelength = 2500,  data_start = 1,  sort_term = 'USDA Symbol', toggle_float_conversion = True, toggle_norm = False):
-     
-    data = data.sort_values(by=[sort_term])
-    token_Symbol_sample_no_dic =  count_samples_by_symbol(data, sort_term) 
-    #print(token_Symbol_sample_no_dic)   
-
-    x_points, data_start, data_end = extract_wavelength(data, min_wavelength, max_wavelength, data_start)
-
-    data_len = data_end - data_start 
-     
-    data_matrix = []
-
-    #make a dic for each token_Symbol_for_analysis
-    token_symbol_of_matixs = {}
-    last_symbol = None
-    overall_index = 0
-    for index, row in data.iterrows():
-        symbol = row[sort_term] 
-        if symbol != last_symbol and last_symbol is not None:
-
-            #add matrix to dic
-            token_symbol_of_matixs[last_symbol] = data_matrix 
-
-            #reset matrix
-            data_matrix = np.zeros((token_Symbol_sample_no_dic[symbol],  data_len))  
-            overall_index = index  
-
-        if last_symbol is None:
-            #reduce the  matrix to the size of token_Symbol_sample_no_dic[last_symbol]
-            data_matrix = np.zeros((token_Symbol_sample_no_dic[symbol], data_len)) 
-
-        # Ensure xpoints and ypoints are 1D arrays for plotting
-        y_points = extract_reflectance_from_row(row, data_start, data_end)  
-
-        # Ensure ypoints has exactly data_len and evenly spaced the data points thru the data set 
-        y_points = np.linspace(y_points[0], y_points[-1], data_len)
-        
-        #convert ypoints to float
-        #if toggle_float_conversion is True:
-            #ypoints = np.array(ypoints, dtype=float)
-        
-        #normalize ypoints
-        #if toggle_norm is True:
-            #ypoints = ((ypoints - np.min(ypoints)) / (np.max(ypoints) - np.min(ypoints)))
-        
-        #add ypoints to matrix
-        data_matrix[index-overall_index] = y_points 
-        
-        last_symbol = symbol
-    return token_symbol_of_matixs, np.array(x_points, dtype=float)   
-        
-
-def find_mean_of_matrix_row(matrix):
-    matrix = matrix.transpose() 
-    #find the mean of each row, then add to new arr  
-    mean_arr = []
-    for row in matrix: 
-        #calc the mean
-        mean_arr.append(np.mean(row))
-    mean_arr = np.array(mean_arr, dtype=float)   
-    return mean_arr
-
-def find_std_of_matrix_row(matrix):
-    matrix = matrix.transpose() 
-    #std = standard deviation 
-    #find the std of each row, then add to new arr
-    std_arr = []
-    for row in matrix:  
-        #calc std
-        std_arr(np.std(row)) 
-
-    return std_arr
-def find_anova_1_way_p_f(matrix):
-    
-    #f_value, p_value = f_oneway()
-    for row in matrix:
-
-
-     
-    return None
-
-def statsitic_analysis(data,  min_wavelength = 350, max_wavelength = 2500,  data_start = 1,  sort_term = 'USDA Symbol'):
-    class_data_dict, wavelengths = class_data_dict_gen(data, min_wavelength, max_wavelength, data_start, sort_term)
-
-    #transpose data
-    #print(wavelengths.transpose()) 
-    #print("Shape of the matrix:", wavelengths.shape) 
-    matrix_output = {}
-
-    
-    # Ensure the output directory exists
-    output_dir = './data/analysis/'
-    os.makedirs(output_dir, exist_ok=True) 
-
-    for key, matrix in class_data_dict.items():
-        
-        
-        #print(f"{class_lable}:", matrix) 
-        #print("Shape of the matrix:", matrix.shape) 
-        #do the action
-        #arr_f, arr_p = find_anova_1_way_p_f_value_of_row(matrix)
-        #revert back add to new dict
-        #print("arr p:",arr_p)
-        #matrix_output[key] = arr_p
-        
-        #plot 
-        plt.figure()  
-        plt.title(f"{sort_term}: {key}") 
-        plt.xlabel("wavelengths")
-        plt.ylabel("P_vlaue")
-            #reduce the number of ticks on the x axis
-        plt.xticks(np.arange(0, len(wavelengths), len(wavelengths)/10), fontsize=8)
-        plt.plot(wavelengths, matrix_output[key] , label=f"Sample {key}")
-        plt.show() 
-        plt.savefig(f'{output_dir}{key}_mean_wavelenght_reflectance_plot.png') 
-        
-        break  
-
-
-    return None
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
