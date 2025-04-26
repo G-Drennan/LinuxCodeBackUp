@@ -15,6 +15,7 @@ from sklearn.preprocessing import StandardScaler
 from data_extraction import extract_data
 from data_extraction import token_sample_extract
 from data_extraction import count_samples_by_symbol 
+from data_extraction import return_class_lables
 
 # Set NumPy print options to display higher precision
 np.set_printoptions(precision=10, suppress=False) 
@@ -31,7 +32,7 @@ def extract_reflectance_from_row(data, data_start, data_end, toggle_float_conver
 def extract_wavelength(data, min_wavelength = 0, max_wavelength = 2500, data_start=1): 
     xpoints_data = list(data)
     xpoints = xpoints_data[data_start:]   
-    if min_wavelength == 0: #all the data is used 
+    if min_wavelength == 0: #all the data is used   
         min_wavelength_index = xpoints_data.index(xpoints[0]) #data_start 
         max_wavelength_index = xpoints_data.index(xpoints[-1])+1#len(xpoints_data) 
         return xpoints, min_wavelength_index, max_wavelength_index #-1 throws an error as their is no min_wave_index  
@@ -170,7 +171,7 @@ def dataset_genration(data, min_wavelength, max_wavelength,  data_start = 1,  so
 
     for index, row in data.iterrows():
         symbol = row[sort_term]   
-        if index is 0:
+        if index == 0: 
             output_dir = f'./data/{symbol}_dataset/'
             os.makedirs(output_dir, exist_ok=True) 
         
@@ -198,6 +199,74 @@ def dataset_genration(data, min_wavelength, max_wavelength,  data_start = 1,  so
         #break #used to test and create only 1 image  
     return None
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Analysis ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def anova_feature_selection(data, wavelengths, class_labels):
+    """
+    Perform ANOVA to find significant wavelengths.
+    
+    :param data: 2D NumPy array where rows are samples and columns are wavelengths.
+    :param wavelengths: List of wavelength values corresponding to the columns of `data`.
+    :param class_labels: List of class labels corresponding to the rows of `data`.
+    :return: List of tuples (wavelength, p-value, F-value) sorted by p-value.
+    """
+    # Group data by class
+    unique_classes = np.unique(class_labels)
+    grouped_data = {cls: data[class_labels == cls] for cls in unique_classes}
+    
+    significant_features = []
+    
+    # Perform ANOVA for each wavelength
+    for i, wavelength in enumerate(wavelengths):
+        # Collect reflectance values for this wavelength across all classes
+        wavelength_data = [group[:, i] for group in grouped_data.values()]
+        
+        # Perform one-way ANOVA
+        f_value, p_value = f_oneway(*wavelength_data)
+        
+        # Store results
+        significant_features.append((wavelength, p_value, f_value))
+    
+    # Sort results by p-value
+    significant_features.sort(key=lambda x: x[1])  # Sort by p-value (ascending)
+    
+    return significant_features
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~miscellaneous~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def extract_class_from_image_name(image_name):
+    # Extract the class from the image name
+    # Assuming the format is like 'class_name_random_dataset_sample_size_45_square_map_ID1.png'
+    parts = image_name.split('_')
+    if len(parts) > 0:
+        class_name = parts[0]
+        return class_name 
+    return None
+
+def main(): 
+    extract_data()    
+    path = './data/HS_data_for_analysis.csv'  
+    data = pd.read_csv(path)  
+    #sort data by USDA Symbol
+    data = data.sort_values(by=['USDA Symbol'])      
+    #plot_wavelength(data,'USDA Symbol', 400, 2424) 
+    #dataset_genration(data, 400, 2424)
+    class_labels = return_class_lables(data) 
+    wavelengths = extract_wavelength(data) 
+
+    significant_features = anova_feature_selection(data, wavelengths, class_labels)
+
+    # Print top 10 significant wavelengths
+    for wavelength, p_value, f_value in significant_features[:10]:
+        print(f"Wavelength: {wavelength} nm, p-value: {p_value:.5f}, F-value: {f_value:.2f}")
+
+     
+    
+
+if __name__ == "__main__":
+    main()
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~old code~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"""
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ statstic analysis ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def class_data_dict_gen(data,  min_wavelength = 350, max_wavelength = 2500,  data_start = 1,  sort_term = 'USDA Symbol', toggle_float_conversion = True, toggle_norm = False):
      
@@ -272,8 +341,10 @@ def find_std_of_matrix_row(matrix):
 
     return std_arr
 def find_anova_1_way_p_f(matrix):
-    #dont transposet the matrix
+    
     #f_value, p_value = f_oneway()
+    for row in matrix:
+
 
      
     return None
@@ -301,8 +372,8 @@ def statsitic_analysis(data,  min_wavelength = 350, max_wavelength = 2500,  data
         #revert back add to new dict
         #print("arr p:",arr_p)
         #matrix_output[key] = arr_p
-        """
-        #plot
+        
+        #plot 
         plt.figure()  
         plt.title(f"{sort_term}: {key}") 
         plt.xlabel("wavelengths")
@@ -312,44 +383,14 @@ def statsitic_analysis(data,  min_wavelength = 350, max_wavelength = 2500,  data
         plt.plot(wavelengths, matrix_output[key] , label=f"Sample {key}")
         plt.show() 
         plt.savefig(f'{output_dir}{key}_mean_wavelenght_reflectance_plot.png') 
-        """
+        
         break  
 
 
     return None
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~miscellaneous~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def extract_class_from_image_name(image_name):
-    # Extract the class from the image name
-    # Assuming the format is like 'class_name_random_dataset_sample_size_45_square_map_ID1.png'
-    parts = image_name.split('_')
-    if len(parts) > 0:
-        class_name = parts[0]
-        return class_name 
-    return None
 
-def main(): 
-    #extract_data()    
-    path = './data/HS_data_for_analysis.csv'  
-    data = pd.read_csv(path)  
-    #sort data by USDA Symbol
-    data = data.sort_values(by=['USDA Symbol'])      
-    #plot_wavelength(data,'USDA Symbol', 400, 2424) 
-    dataset_genration(data, 400, 2424)
-
-    #statsitic_analysis(data, 400, 2424)     
-
-     
-    
-
-if __name__ == "__main__":
-    main()
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~old code~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-"""
-
-
-
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def find_mean_of_matrix_col(matrix):
     if not isinstance(matrix, np.ndarray):

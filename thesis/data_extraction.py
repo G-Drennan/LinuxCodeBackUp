@@ -16,7 +16,7 @@ def token_sample_extract(token_Symbol_dic):
             token_Symbol_for_analysis.append(key)
     return token_Symbol_100, token_Symbol_for_analysis
 
-def count_samples_by_symbol(data, sort_term):
+def count_samples_by_symbol(data, sort_term = 'USDA Symbol'):
    
     Symbol_count_dic = {}
     for index, row in data.iterrows():  
@@ -24,8 +24,13 @@ def count_samples_by_symbol(data, sort_term):
         if symbol in Symbol_count_dic:
             Symbol_count_dic[symbol] += 1
         else:  
-            Symbol_count_dic[symbol] = 1
+            Symbol_count_dic[symbol] = 1 
     return Symbol_count_dic
+
+def return_class_lables(data, sort_term = 'USDA Symbol'):
+    token_Symbol_100, token_Symbol_for_analysis = token_sample_extract(count_samples_by_symbol(data)) 
+    return token_Symbol_for_analysis
+
 
 def extract_data(sample_token = 'USDA Symbol', 
                 path = './data/fresh-leaf-spectra-to-estimate-lma-over-neon-domains-in-eastern-united-states.csv',  
