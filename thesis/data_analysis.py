@@ -269,6 +269,12 @@ def find_std_of_matrix_row(matrix):
         std_arr(np.std(row)) 
 
     return std_arr
+def find_anova_1_way_p_f(matrix):
+
+    #f_value, p_value = f_oneway()
+
+     
+    return None
 
 def statsitic_analysis(data,  min_wavelength = 350, max_wavelength = 2500,  data_start = 1,  sort_term = 'USDA Symbol'):
     class_data_dict, wavelengths = class_data_dict_gen(data, min_wavelength, max_wavelength, data_start, sort_term)
@@ -289,23 +295,23 @@ def statsitic_analysis(data,  min_wavelength = 350, max_wavelength = 2500,  data
         #print(f"{class_lable}:", matrix) 
         #print("Shape of the matrix:", matrix.shape) 
         #do the action
-        arr = find_mean_of_matrix_row(matrix)
+        #arr_f, arr_p = find_anova_1_way_p_f_value_of_row(matrix)
         #revert back add to new dict
-        print("arr:",arr)
-        matrix_output[key] = arr    #.transpose() 
-
+        #print("arr p:",arr_p)
+        #matrix_output[key] = arr_p
+        """
         #plot
         plt.figure()  
-        plt.title(f"{sort_term}: {key}")
+        plt.title(f"{sort_term}: {key}") 
         plt.xlabel("wavelengths")
-        plt.ylabel("Reflectance")
+        plt.ylabel("P_vlaue")
             #reduce the number of ticks on the x axis
         plt.xticks(np.arange(0, len(wavelengths), len(wavelengths)/10), fontsize=8)
-        plt.plot(wavelengths, arr, label=f"Sample {key}")
+        plt.plot(wavelengths, matrix_output[key] , label=f"Sample {key}")
         plt.show() 
         plt.savefig(f'{output_dir}{key}_mean_wavelenght_reflectance_plot.png') 
-
-        break 
+        """
+        break  
 
 
     return None
@@ -329,7 +335,7 @@ def main():
     #plot_wavelength(data,'USDA Symbol', 400, 2424) 
     dataset_genration(data, 400, 2424)
 
-    statsitic_analysis(data, 400, 2424)     
+    #statsitic_analysis(data, 400, 2424)     
 
      
     
