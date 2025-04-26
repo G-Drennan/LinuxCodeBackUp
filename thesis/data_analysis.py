@@ -252,6 +252,7 @@ def class_data_dict_gen(data,  min_wavelength = 350, max_wavelength = 2500,  dat
         
 
 def find_mean_of_matrix_row(matrix):
+    matrix = matrix.transpose() 
     #find the mean of each row, then add to new arr  
     mean_arr = []
     for row in matrix: 
@@ -261,6 +262,7 @@ def find_mean_of_matrix_row(matrix):
     return mean_arr
 
 def find_std_of_matrix_row(matrix):
+    matrix = matrix.transpose() 
     #std = standard deviation 
     #find the std of each row, then add to new arr
     std_arr = []
@@ -270,7 +272,7 @@ def find_std_of_matrix_row(matrix):
 
     return std_arr
 def find_anova_1_way_p_f(matrix):
-
+    #dont transposet the matrix
     #f_value, p_value = f_oneway()
 
      
@@ -291,7 +293,7 @@ def statsitic_analysis(data,  min_wavelength = 350, max_wavelength = 2500,  data
 
     for key, matrix in class_data_dict.items():
         
-        matrix = matrix.transpose() 
+        
         #print(f"{class_lable}:", matrix) 
         #print("Shape of the matrix:", matrix.shape) 
         #do the action
