@@ -30,7 +30,7 @@ def count_samples_by_symbol(data, sort_term):
 def extract_data(sample_token = 'USDA Symbol', 
                 path = './data/fresh-leaf-spectra-to-estimate-lma-over-neon-domains-in-eastern-united-states.csv',  
                 final_path='./data/HS_data_for_analysis.csv'):
-    
+     
     #read in data from path
     data = pd.read_csv(path)
     #print(data.to_string()) 
@@ -40,6 +40,9 @@ def extract_data(sample_token = 'USDA Symbol',
 
     #for every row in data, add new USDA Symbol to a dic and count them if they aleady exist
     token_Symbol = count_samples_by_symbol(data, sample_token)
+    print(token_Symbol)
+    #print the length of token_Symbol
+    print(len(token_Symbol)) 
     
     #sort the token_Symbol dic by value
     token_Symbol = dict(sorted(token_Symbol.items(), key=lambda item: item[1], reverse=True))

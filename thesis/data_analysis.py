@@ -198,6 +198,118 @@ def dataset_genration(data, min_wavelength, max_wavelength,  data_start = 1,  so
         #break #used to test and create only 1 image  
     return None
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ statstic analysis ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+def class_data_dict_gen(data,  min_wavelength = 350, max_wavelength = 2500,  data_start = 1,  sort_term = 'USDA Symbol', toggle_float_conversion = True, toggle_norm = False):
+     
+    data = data.sort_values(by=[sort_term])
+    token_Symbol_sample_no_dic =  count_samples_by_symbol(data, sort_term) 
+    #print(token_Symbol_sample_no_dic)   
+
+    x_points, data_start, data_end = extract_wavelength(data, min_wavelength, max_wavelength, data_start)
+
+    data_len = data_end - data_start 
+     
+    data_matrix = []
+
+    #make a dic for each token_Symbol_for_analysis
+    token_symbol_of_matixs = {}
+    last_symbol = None
+    overall_index = 0
+    for index, row in data.iterrows():
+        symbol = row[sort_term] 
+        if symbol != last_symbol and last_symbol is not None:
+
+            #add matrix to dic
+            token_symbol_of_matixs[last_symbol] = data_matrix 
+
+            #reset matrix
+            data_matrix = np.zeros((token_Symbol_sample_no_dic[symbol],  data_len))  
+            overall_index = index  
+
+        if last_symbol is None:
+            #reduce the  matrix to the size of token_Symbol_sample_no_dic[last_symbol]
+            data_matrix = np.zeros((token_Symbol_sample_no_dic[symbol], data_len)) 
+
+        # Ensure xpoints and ypoints are 1D arrays for plotting
+        y_points = extract_reflectance_from_row(row, data_start, data_end)  
+
+        # Ensure ypoints has exactly data_len and evenly spaced the data points thru the data set 
+        y_points = np.linspace(y_points[0], y_points[-1], data_len)
+        
+        #convert ypoints to float
+        #if toggle_float_conversion is True:
+            #ypoints = np.array(ypoints, dtype=float)
+        
+        #normalize ypoints
+        #if toggle_norm is True:
+            #ypoints = ((ypoints - np.min(ypoints)) / (np.max(ypoints) - np.min(ypoints)))
+        
+        #add ypoints to matrix
+        data_matrix[index-overall_index] = y_points 
+        
+        last_symbol = symbol
+    return token_symbol_of_matixs, np.array(x_points, dtype=float)   
+        
+
+def find_mean_of_matrix_row(matrix):
+    #find the mean of each row, then add to new arr  
+    mean_arr = []
+    for row in matrix: 
+        #calc the mean
+        mean_arr.append(np.mean(row))
+    mean_arr = np.array(mean_arr, dtype=float)   
+    return mean_arr
+
+def find_std_of_matrix_row(matrix):
+    #std = standard deviation 
+    #find the std of each row, then add to new arr
+    std_arr = []
+    for row in matrix:  
+        #calc std
+        std_arr(np.std(row)) 
+
+    return std_arr
+
+def statsitic_analysis(data,  min_wavelength = 350, max_wavelength = 2500,  data_start = 1,  sort_term = 'USDA Symbol'):
+    class_data_dict, wavelengths = class_data_dict_gen(data, min_wavelength, max_wavelength, data_start, sort_term)
+
+    #transpose data
+    #print(wavelengths.transpose()) 
+    #print("Shape of the matrix:", wavelengths.shape) 
+    matrix_output = {}
+
+    
+    # Ensure the output directory exists
+    output_dir = './data/analysis/'
+    os.makedirs(output_dir, exist_ok=True) 
+
+    for key, matrix in class_data_dict.items():
+        
+        matrix = matrix.transpose() 
+        #print(f"{class_lable}:", matrix) 
+        #print("Shape of the matrix:", matrix.shape) 
+        #do the action
+        arr = find_mean_of_matrix_row(matrix)
+        #revert back add to new dict
+        print("arr:",arr)
+        matrix_output[key] = arr    #.transpose() 
+
+        #plot
+        plt.figure()  
+        plt.title(f"{sort_term}: {key}")
+        plt.xlabel("wavelengths")
+        plt.ylabel("Reflectance")
+            #reduce the number of ticks on the x axis
+        plt.xticks(np.arange(0, len(wavelengths), len(wavelengths)/10), fontsize=8)
+        plt.plot(wavelengths, arr, label=f"Sample {key}")
+        plt.show() 
+        plt.savefig(f'{output_dir}{key}_mean_wavelenght_reflectance_plot.png') 
+
+        break 
+
+
+    return None
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~miscellaneous~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def extract_class_from_image_name(image_name):
     # Extract the class from the image name
@@ -214,20 +326,12 @@ def main():
     data = pd.read_csv(path)  
     #sort data by USDA Symbol
     data = data.sort_values(by=['USDA Symbol'])      
-    #x,a,b = extract_wavelength(data, 400, 2424)# , 400, 2424)  
-    #y = np.array(extract_reflectance_from_row(data.iloc[0], a, b))    
-    #x = np.array(x) 
-    #print(y.size, x.size, a, b)    
-    #print("xpoints", x)
-    #print("ypoints", y) 
-
     #plot_wavelength(data,'USDA Symbol', 400, 2424) 
-    #dataset_genration(data, 400,2424) 
+    dataset_genration(data, 400, 2424)
 
-    #for key, value in significant_features.items():  # Use .items() to iterate over key-value pairs
-        #print(f"Class: {key}")
+    statsitic_analysis(data, 400, 2424)     
 
-    #principal_component_analysis(extract_reflectance(data).to_numpy(), extract_class_coloum(data), 20)        
+     
     
 
 if __name__ == "__main__":
@@ -237,59 +341,7 @@ if __name__ == "__main__":
 """
 
 
-def create_data_dict_by_class(data, wavelength_min = 300, wavelenght_max = 2500, sort_term='USDA Symbol', data_start=1, toggle_norm = False, toggle_float_conversion=True ): 
-    data = data.sort_values(by=[sort_term])
-    token_Symbol_sample_no_dic =  count_samples_by_symbol(data, sort_term) 
-    print(token_Symbol_sample_no_dic)  
-    #find len of data from data_start to end of data 
-    data_len = len(data.iloc[data_start:])
-    
-    #create a matrix of zeros with the same dimenatsion as data
-    data_matrix = np.zeros((len(data), data_len)) 
 
-    xpoints, data_start, data_end = extract_wavelength(data, wavelength_min, wavelenght_max, data_start) 
-     
-    #make a dic for each token_Symbol_for_analysis
-    token_symbol_of_matixs = {}
-    last_symbol = None
-    overall_index = 0 
-    for index, row in data.iterrows():
-
-        symbol = row[sort_term] 
-        if symbol != last_symbol and last_symbol is not None:
-            
-            
-            #add matrix to dic
-            token_symbol_of_matixs[last_symbol] = data_matrix 
-
-            #reset matrix
-            data_matrix = np.zeros((token_Symbol_sample_no_dic[symbol],  data_len))  
-            overall_index = index  
-
-        if last_symbol is None:
-            #reduce the  matrix to the size of token_Symbol_sample_no_dic[last_symbol]
-            data_matrix = np.zeros((token_Symbol_sample_no_dic[symbol], data_len)) 
-
-        # Ensure xpoints and ypoints are 1D arrays for plotting
-        ypoints = extract_reflectance_from_row(row, data_start, data_end)  
-
-        # Ensure ypoints has exactly data_len and evenly spaced the data points thru the data set 
-        ypoints = np.linspace(ypoints[0], ypoints[-1], data_len)
-        
-        #convert ypoints to float
-        if toggle_float_conversion is True:
-            ypoints = np.array(ypoints, dtype=float)
-        
-        #normalize ypoints
-        if toggle_norm is True:
-            ypoints = ((ypoints - np.min(ypoints)) / (np.max(ypoints) - np.min(ypoints)))
-        
-        #add ypoints to matrix
-        data_matrix[index-overall_index] = ypoints 
-        
-        last_symbol = symbol
-
-    return token_symbol_of_matixs 
 
 def find_mean_of_matrix_col(matrix):
     if not isinstance(matrix, np.ndarray):
