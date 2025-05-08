@@ -1,3 +1,0 @@
-[console_scripts]
-nav2_test_node = nav2_test_pkg.nav2_test_node:main
-
