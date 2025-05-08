@@ -1,0 +1,37 @@
+[0.537s] Invoking command in '/home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/src/nav2_test_pkg': PYTHONPATH=/home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/build/nav2_test_pkg/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/install/nav2_test_pkg/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/nav2_test_pkg build --build-base /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/build/nav2_test_pkg/build install --record /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/build/nav2_test_pkg/install.log --single-version-externally-managed install_data
+[0.678s] running egg_info
+[0.679s] creating ../../build/nav2_test_pkg/nav2_test_pkg.egg-info
+[0.679s] writing ../../build/nav2_test_pkg/nav2_test_pkg.egg-info/PKG-INFO
+[0.679s] writing dependency_links to ../../build/nav2_test_pkg/nav2_test_pkg.egg-info/dependency_links.txt
+[0.680s] writing entry points to ../../build/nav2_test_pkg/nav2_test_pkg.egg-info/entry_points.txt
+[0.680s] writing requirements to ../../build/nav2_test_pkg/nav2_test_pkg.egg-info/requires.txt
+[0.680s] writing top-level names to ../../build/nav2_test_pkg/nav2_test_pkg.egg-info/top_level.txt
+[0.680s] writing manifest file '../../build/nav2_test_pkg/nav2_test_pkg.egg-info/SOURCES.txt'
+[0.681s] reading manifest file '../../build/nav2_test_pkg/nav2_test_pkg.egg-info/SOURCES.txt'
+[0.681s] writing manifest file '../../build/nav2_test_pkg/nav2_test_pkg.egg-info/SOURCES.txt'
+[0.681s] running build
+[0.681s] running build_py
+[0.681s] creating /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/build/nav2_test_pkg/build
+[0.682s] creating /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/build/nav2_test_pkg/build/lib
+[0.682s] creating /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/build/nav2_test_pkg/build/lib/nav2_test_pkg
+[0.683s] copying nav2_test_pkg/nav2_test_node.py -> /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/build/nav2_test_pkg/build/lib/nav2_test_pkg
+[0.683s] copying nav2_test_pkg/__init__.py -> /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/build/nav2_test_pkg/build/lib/nav2_test_pkg
+[0.683s] running install
+[0.683s] running install_lib
+[0.684s] creating /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/install/nav2_test_pkg/lib/python3.10/site-packages/nav2_test_pkg
+[0.684s] copying /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/build/nav2_test_pkg/build/lib/nav2_test_pkg/nav2_test_node.py -> /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/install/nav2_test_pkg/lib/python3.10/site-packages/nav2_test_pkg
+[0.684s] copying /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/build/nav2_test_pkg/build/lib/nav2_test_pkg/__init__.py -> /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/install/nav2_test_pkg/lib/python3.10/site-packages/nav2_test_pkg
+[0.684s] byte-compiling /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/install/nav2_test_pkg/lib/python3.10/site-packages/nav2_test_pkg/nav2_test_node.py to nav2_test_node.cpython-310.pyc
+[0.685s] byte-compiling /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/install/nav2_test_pkg/lib/python3.10/site-packages/nav2_test_pkg/__init__.py to __init__.cpython-310.pyc
+[0.685s] running install_data
+[0.685s] creating /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/install/nav2_test_pkg/share/ament_index
+[0.685s] creating /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/install/nav2_test_pkg/share/ament_index/resource_index
+[0.686s] creating /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/install/nav2_test_pkg/share/ament_index/resource_index/packages
+[0.686s] copying resource/nav2_test_pkg -> /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/install/nav2_test_pkg/share/ament_index/resource_index/packages
+[0.686s] copying package.xml -> /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/install/nav2_test_pkg/share/nav2_test_pkg
+[0.686s] running install_egg_info
+[0.687s] Copying ../../build/nav2_test_pkg/nav2_test_pkg.egg-info to /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/install/nav2_test_pkg/lib/python3.10/site-packages/nav2_test_pkg-0.0.0-py3.10.egg-info
+[0.688s] running install_scripts
+[0.700s] Installing nav2_test_node script to /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/install/nav2_test_pkg/lib/nav2_test_pkg
+[0.700s] writing list of installed files to '/home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/build/nav2_test_pkg/install.log'
+[0.714s] Invoked command in '/home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/src/nav2_test_pkg' returned '0': PYTHONPATH=/home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/build/nav2_test_pkg/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/install/nav2_test_pkg/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/nav2_test_pkg build --build-base /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/build/nav2_test_pkg/build install --record /home/rogue/codeSpace/repos/LinuxCodeBackUp/code/ros2_ws/build/nav2_test_pkg/install.log --single-version-externally-managed install_data
