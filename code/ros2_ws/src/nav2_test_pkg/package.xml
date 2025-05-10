@@ -2,17 +2,27 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>nav2_test_pkg</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="roguenobody247@gmail.com">rogue</maintainer>
-  <license>TODO: License declaration</license>
+  <version>0.0.1</version>
+  <description>Launches a TurtleBot3 in Gazebo with SLAM and a custom Nav2 Python node.</description>
 
-  <test_depend>rclpy</test_depend> 
-  <test_depend>geometry_msgs</test_depend>
-  <test_depend>nav2_simple_commander</test_depend>
-  <exec_depend>ros2launch</exec_depend> 
-  <exec_depend>launch</exec_depend>
-  <exec_depend>launch_ros</exec_depend>
+  <maintainer email="you@example.com">rogue</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav2_simple_commander</depend>
+  <depend>nav2_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>slam_toolbox</depend>
+  <depend>nav2_bringup</depend>
+  <depend>launch</depend>
+  <depend>launch_ros</depend>
+
+  <exec_depend>python3</exec_depend>
+  <exec_depend>python_tsp</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
