@@ -1,147 +1,72 @@
 import rclpy
 from rclpy.node import Node
+from nav2_simple_commander.robot_navigator import BasicNavigator
 from geometry_msgs.msg import PoseStamped
-from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
-import math
-from python_tsp.exact import solve_tsp 
+from typing import List, Tuple
+import time
 
-class Nav2TestNode(Node):
+class PathPlanner:
+    def __init__(self, navigator: BasicNavigator):
+        self.navigator = navigator
+
+    def compute_path(self, waypoints: List[PoseStamped]) -> Tuple[List[PoseStamped], float]:
+        if len(waypoints) < 2:
+            return [], float('inf')
+
+        total_path = []
+        total_length = 0.0
+
+        for i in range(len(waypoints) - 1):
+            self.navigator.clear_costmap()
+            path = self.navigator.compute_path(waypoints[i], waypoints[i + 1])
+            if not path or len(path.poses) == 0:
+                return [], float('inf')
+            total_path.extend(path.poses)
+            total_length += self._compute_path_length(path.poses)
+
+        return total_path, total_length
+
+    def _compute_path_length(self, poses: List[PoseStamped]) -> float:
+        length = 0.0
+        for i in range(len(poses) - 1):
+            dx = poses[i + 1].pose.position.x - poses[i].pose.position.x
+            dy = poses[i + 1].pose.position.y - poses[i].pose.position.y
+            length += (dx ** 2 + dy ** 2) ** 0.5
+        return length
+
+
+class DynamicWaypointNavigator(Node):
     def __init__(self):
-        super().__init__('nav2_test_node')
+        super().__init__('dynamic_waypoint_navigator')
         self.navigator = BasicNavigator()
+        self.planner = PathPlanner(self.navigator)
 
-        # Set an initial pose
-        initial_pose = PoseStamped()
-        initial_pose.header.frame_id = 'map'
-        initial_pose.pose.position.x = 0.0
-        initial_pose.pose.position.y = 0.0
-        initial_pose.pose.orientation.w = 1.0
-        self.navigator.setInitialPose(initial_pose)
+    def navigate_through_waypoints(self, waypoints: List[PoseStamped]):
+        remaining_waypoints = waypoints.copy()
 
-        self.get_logger().info('Nav2 Test Node Initialized')
-    '''
-    def compute_path_length(self, start_pose, end_pose):
-        # Compute the Euclidean distance between two poses
-        p1 = start_pose.pose.position
-        p2 = end_pose.pose.position
-        return math.hypot(p2.x - p1.x, p2.y - p1.y)
-    '''
+        while remaining_waypoints:
+            current_pose = self.navigator.get_current_pose()
 
-    
-    def compute_path_length(self, path: Path):
-        """Compute the total Euclidean length of a nav_msgs/Path."""
-        if not path.poses or len(path.poses) < 2:
-            return 0.0
-        total = 0.0
-        for i in range(1, len(path.poses)):
-            p1 = path.poses[i - 1].pose.position
-            p2 = path.poses[i].pose.position
-            total += math.hypot(p2.x - p1.x, p2.y - p1.y)
-        return total
+            candidate_paths = []
+            for i in range(len(remaining_waypoints)):
+                candidate = [current_pose] + remaining_waypoints[i:]
+                path, cost = self.planner.compute_path(candidate)
+                if path:
+                    candidate_paths.append((path, cost, i))
 
-    def find_optimal_path(self, waypoints):
-        n = len(waypoints)
-        cost_matrix = [[0.0] * n for _ in range(n)]
+            if not candidate_paths:
+                self.get_logger().error("No valid path found to any remaining waypoint.")
+                break
 
-        # Compute the cost matrix (distance matrix)
-        for i in range(n):
-            for j in range(n):
-                if i != j:
-                    # Use computePath to get the path between two waypoints
-                    path = self.navigator.computePath(waypoints[i], waypoints[j])
-                    cost_matrix[i][j] = self.compute_path_length(waypoints[i], waypoints[j])
+            best_path, _, best_index = min(candidate_paths, key=lambda x: x[1])
 
-        # Solve TSP
-        best_order, _ = solve_tsp(cost_matrix)
+            self.navigator.follow_path(best_path)
+            while not self.navigator.is_task_complete():
+                time.sleep(0.5)
 
-        # Re-order waypoints based on the optimal path
-        opt_waypoints = [waypoints[i] for i in best_order]
-        
-        opt_path = self.navigator.computePathThroughPoses(opt_waypoints)
-        return opt_path 
-    
-    def run(self):
-        # Wait for Nav2 to activate
-        services = self.get_service_names_and_types()
-        amcl_present = any('/amcl/get_state' in name for name, _ in services)  
-        if amcl_present:
-            self.get_logger().info("AMCL detected; waiting for Nav2 to become active...")
-        else:
-            self.get_logger().info("AMCL not found; assuming SLAM is being used.")
+            # Remove visited waypoints
+            remaining_waypoints = remaining_waypoints[best_index + 1:]
 
-        self.navigator.waitUntilNav2Active() 
+            self.get_logger().info("Reached a waypoint. Recalculating next best path...")
 
-        
-        '''
-        services = self.get_service_names_and_types()
-        amcl_present = any('/amcl/get_state' in name for name, _ in services) 
-        if amcl_present:
-            self.navigator.waitUntilNav2Active()
-        else:
-            print("Skipping AMCL state wait: using SLAM or no AMCL service available.")
-        '''
-
-        # Define a goal pose
-        goal_pose1 = PoseStamped()
-        goal_pose1.header.frame_id = 'map'
-        goal_pose1.pose.position.x = 2.0
-        goal_pose1.pose.position.y = 2.0
-        goal_pose1.pose.orientation.w = 1.0
-
-        goal_pose2 = PoseStamped()
-        goal_pose2.header.frame_id = 'map'
-        goal_pose2.pose.position.x = 3.0
-        goal_pose2.pose.position.y = 1.0
-        goal_pose2.pose.orientation.w = 0.0
-
-        goal_pose3 = PoseStamped()
-        goal_pose3.header.frame_id = 'map'
-        goal_pose3.pose.position.x = -1.0
-        goal_pose3.pose.position.y = 2.0
-        goal_pose3.pose.orientation.w = 1.0
-
-        # Navigate to the goal
-        waypoints = [goal_pose3, goal_pose1, goal_pose2]
-        path = self.navigator.computePathThroughPoses(waypoints)
-        self.get_logger().info(f"Path has {len(path.poses)} poses") 
-        #opt_path = self.find_optimal_path(waypoints)
-        self.navigator.followPath(path)  
-
-        while not self.navigator.isTaskComplete():
-            feedback = self.navigator.getFeedback()
-            if feedback:
-                self.get_logger().info(f"Distance remaining: {feedback.distance_remaining:.2f} meters")
-
-        result = self.navigator.getResult()
-        if result == TaskResult.SUCCEEDED:
-            self.get_logger().info("Navigation succeeded!")
-        elif result == TaskResult.CANCELED:
-            self.get_logger().info("Navigation was canceled.")
-        elif result == TaskResult.FAILED:
-            self.get_logger().info("Navigation failed.")
-        '''
-        self.navigator.followPath(opt_path)   
-
-        while not self.navigator.isTaskComplete():
-            feedback = self.navigator.getFeedback()
-            if feedback:
-                self.get_logger().info(f"Distance remaining: {feedback.distance_remaining:.2f} meters")
-
-        result = self.navigator.getResult()
-        if result == TaskResult.SUCCEEDED:
-            self.get_logger().info("Navigation succeeded!")
-        elif result == TaskResult.CANCELED:
-            self.get_logger().info("Navigation was canceled.")
-        elif result == TaskResult.FAILED:
-            self.get_logger().info("Navigation failed.")
-        '''
-
-def main(args=None):
-    rclpy.init(args=args)
-    node = Nav2TestNode()
-    node.run()
-    node.destroy_node()
-    rclpy.shutdown()
-
-if __name__ == '__main__':
-    main()
+        self.get_logger().info("All waypoints reached or no paths remaining.")
