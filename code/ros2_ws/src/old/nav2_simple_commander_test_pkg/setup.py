@@ -2,7 +2,7 @@ from setuptools import setup
 import os
 from glob import glob
 
-package_name = 'nav2_test_pkg'
+package_name = 'nav2_simple_commander_test_pkg'
 
 setup(
     name=package_name,
@@ -21,6 +21,7 @@ setup(
         'geometry_msgs',
         'nav2_simple_commander',
         'python-tsp',  # for TSP solver
+        'nav_msgs',  # Add this line 
     ],
     zip_safe=True,
     maintainer='rogue',
@@ -30,7 +31,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'nav2_test_node = nav2_test_pkg.nav2_test_node:main',
+            'nav2_test_node = nav2_simple_commander_test_pkg.nav2_test_node:main',
         ],
     },
 )

@@ -4,6 +4,8 @@ from nav2_simple_commander.robot_navigator import BasicNavigator
 from geometry_msgs.msg import PoseStamped
 from typing import List, Tuple
 import time
+from nav_msgs.msg import Path
+
 
 class PathPlanner:
     def __init__(self, navigator: BasicNavigator):
@@ -22,7 +24,7 @@ class PathPlanner:
             if not path or len(path.poses) == 0:
                 return [], float('inf')
             total_path.extend(path.poses)
-            total_length += self._compute_path_length(path.poses)
+            total_length += self._compute_path_length(path.poses) 
 
         return total_path, total_length
 
@@ -70,3 +72,43 @@ class DynamicWaypointNavigator(Node):
             self.get_logger().info("Reached a waypoint. Recalculating next best path...")
 
         self.get_logger().info("All waypoints reached or no paths remaining.")
+
+'''
+
+~ nav2_msg/Path ~
+#An array of poses that represents a Path for a robot to follow
+Header header
+geometry_msgs/PoseStamped[] poses 
+'''
+
+class Nav2TestNode:
+    def __init__(self):
+        self.dynamic_waypoint_nav = DynamicWaypointNavigator()
+
+        self.subscription = self.create_subscription( 
+            Path, #uses custom msg as we want a name attached to the way points. 
+            # an easy method to do this is to send a file name as a sting and have all the info in the file to be read, 
+            # however we want to preserve the geometry_msgs/Pose
+            'waypoints_set',  
+            self.listener_callback_waypoint_finder,
+            10)
+        
+    
+    def listener_callback_waypoint_finder(self, msg):
+        self.dynamic_waypoint_nav.navigate_through_waypoints(self, msg.data) 
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = Nav2TestNode()
+    node.run()
+    node.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+
+
+'''
+
+'''

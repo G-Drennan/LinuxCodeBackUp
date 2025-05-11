@@ -3,7 +3,8 @@ from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 import math
-from python_tsp.exact import solve_tsp 
+from python_tsp.heuristics import solve_tsp_local_search  
+from nav_msgs.msg import Path 
 
 class Nav2TestNode(Node):
     def __init__(self):
@@ -48,17 +49,21 @@ class Nav2TestNode(Node):
             for j in range(n):
                 if i != j:
                     # Use computePath to get the path between two waypoints
-                    path = self.navigator.computePath(waypoints[i], waypoints[j])
+                    path = self.navigator.getPath(waypoints[i], waypoints[j])
                     cost_matrix[i][j] = self.compute_path_length(waypoints[i], waypoints[j])
 
         # Solve TSP
-        best_order, _ = solve_tsp(cost_matrix)
+        best_order, _ = solve_tsp_local_search  (cost_matrix,
+                                                    perturbation_scheme="two_opt_and_swap",
+                                                    max_neighbours=20,
+                                                    max_iterations=5000,
+                                                    seed=42) 
 
         # Re-order waypoints based on the optimal path
         opt_waypoints = [waypoints[i] for i in best_order]
         
-        opt_path = self.navigator.computePathThroughPoses(opt_waypoints)
-        return opt_path 
+        opt_path = self.navigator.getPathThroughPoses(opt_waypoints)
+        return opt_path  
     
     def run(self):
         # Wait for Nav2 to activate
@@ -69,17 +74,7 @@ class Nav2TestNode(Node):
         else:
             self.get_logger().info("AMCL not found; assuming SLAM is being used.")
 
-        self.navigator.waitUntilNav2Active() 
-
-        
-        '''
-        services = self.get_service_names_and_types()
-        amcl_present = any('/amcl/get_state' in name for name, _ in services) 
-        if amcl_present:
-            self.navigator.waitUntilNav2Active()
-        else:
-            print("Skipping AMCL state wait: using SLAM or no AMCL service available.")
-        '''
+        self.navigator.lifecycleStartup()  
 
         # Define a goal pose
         goal_pose1 = PoseStamped()
@@ -102,24 +97,7 @@ class Nav2TestNode(Node):
 
         # Navigate to the goal
         waypoints = [goal_pose3, goal_pose1, goal_pose2]
-        path = self.navigator.computePathThroughPoses(waypoints)
-        self.get_logger().info(f"Path has {len(path.poses)} poses") 
-        #opt_path = self.find_optimal_path(waypoints)
-        self.navigator.followPath(path)  
-
-        while not self.navigator.isTaskComplete():
-            feedback = self.navigator.getFeedback()
-            if feedback:
-                self.get_logger().info(f"Distance remaining: {feedback.distance_remaining:.2f} meters")
-
-        result = self.navigator.getResult()
-        if result == TaskResult.SUCCEEDED:
-            self.get_logger().info("Navigation succeeded!")
-        elif result == TaskResult.CANCELED:
-            self.get_logger().info("Navigation was canceled.")
-        elif result == TaskResult.FAILED:
-            self.get_logger().info("Navigation failed.")
-        '''
+        opt_path = self.find_optimal_path(waypoints)
         self.navigator.followPath(opt_path)   
 
         while not self.navigator.isTaskComplete():
@@ -134,7 +112,7 @@ class Nav2TestNode(Node):
             self.get_logger().info("Navigation was canceled.")
         elif result == TaskResult.FAILED:
             self.get_logger().info("Navigation failed.")
-        '''
+        
 
 def main(args=None):
     rclpy.init(args=args)
