@@ -84,7 +84,7 @@ class Data:
         print("Data dictionary filled with", len(self.dataDict), "entries.")   
         #print only the keys to self.dataDict = {}
         #print(list(self.dataDict.keys()))
-        print(self.dataDict[1])   
+        #print(self.dataDict[1])    
 
 
 if __name__ == '__main__':
