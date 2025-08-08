@@ -16,7 +16,7 @@ import pandas as pd
 import csv
 import matplotlib.pyplot as plt
 
-class Data:
+class C_Data:
     def __init__(self, filenames): 
         self.filenames = filenames
         self.dataDict = {}
@@ -88,58 +88,122 @@ class Data:
         #print(self.dataDict[1])  
         return self.dataDict   
 
-def separate_dict_by_value(value_key, data_dict):
-    #break the dict into parts based of value such as genotype or contitions, ensuring each dict entires share the same value
-    #the new dict still uses ID as the key, but the value is a list of entries that share the same value for the given key
-    #e.g data_dict_1 = {id, genotype: A, ...}, data_dict_2 = {id, genotype: B, ...}
+#~~~~~~~~~~~~~~~~~~~~ dict ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class C_Dict_manager:
+    def __init__(self, inital_dict = {}): 
+        self.inital_dict = inital_dict 
+
+    def get_dict(self):
+        return self.inital_dict
     
-    #sort the dict by the value_key 
-    sortedDict = {}
-    for id, entry in data_dict.items():
-        value = entry[value_key]
-        if value not in sortedDict: 
-            sortedDict[value] = {}
-        sortedDict[value][id] = entry
-    #write to txt file (sorted_dict) 
+    def separate_dict_by_value(self, value_key):
+        #break the dict into parts based of value such as genotype or contitions, ensuring each dict entires share the same value
+        #the new dict still uses ID as the key, but the value is a list of entries that share the same value for the given key
+        #e.g data_dict_1 = {id, genotype: A, ...}, data_dict_2 = {id, genotype: B, ...}
+        
+        #sort the dict by the value_key 
+        sortedDict = {}
+        for id, entry in self.inital_dict.items():
+            value = entry[value_key]
+            if value not in sortedDict: 
+                sortedDict[value] = {}
+            sortedDict[value][id] = entry
+        #write to txt file (sorted_dict) 
+        
+        #write_dict_to_file(sortedDict, value_key)
+
+        return sortedDict 
+
+    def write_dict_to_file(self, dict, lable):
+        outputDir = './data/sorted_dicts/'  
+
+        os.makedirs(outputDir, exist_ok=True)  # Ensure the output directory exists
+        
+        with open(f'{outputDir}sorted_dict_by_{lable}.txt', 'w') as f:
+            f.write(str(dict)) 
+
+#~~~~~~~~~~~~~~~~~~~~~~~ plotting ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class C_Plot_Wavelenght_reflectance:
+    def __init__(self, inital_dict = {}):
+        self.wavelengths_arr = []
+        self.reflectance_arr = []
+        self.lables = [] 
+        self.dataDictSort = inital_dict
+
+    def group_lot_wavelengths_reflectance(self, sort_key):
+        # plot each entry on the same plot, with different colors for each entry
+        # Ensure the output directory exists
+        output_dir = './data/figures/reflectance_v_wavelength/'
+        os.makedirs(output_dir, exist_ok=True)
+        plt.figure()
+        x_label = 'Wavelength (nm)'
+        y_label = 'Reflectance'
+        
+        # Plot each entry with a different color
+        for i, (wavelengths_values, reflectance_values) in enumerate(zip(self.wavelengths_arr, self.reflectance_arr)):
+            plt.plot(wavelengths_values, reflectance_values, label=self.lables[i]) 
+                 
+        plt.title("Reflectance vs Wavelength")
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
+        plt.legend()
+        #save to imae
+        plt.savefig(f'{output_dir}grouped_wavelengths_reflectance_plot_by_{sort_key}.png')
+        plt.show() 
+        plt.close() 
+
+    def plot_wavelengths_reflectance(self, wavelenghts, reflectance, lable):
+
+        # Ensure the output directory exists
+        output_dir = './data/figures/reflectance_v_wavelength/'
+        os.makedirs(output_dir, exist_ok=True) 
+
+        plt.figure()
+        x_label = 'Wavelength (nm)'
+        x_points = wavelenghts
+        y_label = 'Reflectance'
+        y_points = reflectance
+
+        plt.title(f"{lable}")
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
+        #reduce the number of ticks on the x axis
+        plt.xticks(np.arange(0, len(x_points), len(x_points)/10), fontsize=8)
+        
+        # Plot the data
+        plt.plot(x_points, y_points)
+
+        #save plot as a png file
+        plt.savefig(f'{output_dir}{lable}_wavelenght_reflectance_plot.png')
+        plt.show() 
     
-    write_dict_to_file(sortedDict, value_key)
+        
+        plt.close()   
 
-    return sortedDict 
+    def plot_dict_wavelenghts(self):
 
-def write_dict_to_file(dict, lable):
-    outputDir = './data/sorted_dicts/'  
+        for key, entries in self.dataDictSort.items():
+            # Dictionary to accumulate reflectance values per wavelength
+            wavelength_accumulator = {}
+            count = {} 
+            self.lables.append(key) 
 
-    os.makedirs(outputDir, exist_ok=True)  # Ensure the output directory exists
-    
-    with open(f'{outputDir}sorted_dict_by_{lable}.txt', 'w') as f:
-        f.write(str(dict)) 
+            for entry in entries.values(): 
+                for wl_str, refl in entry['Wavelengths'].items():
+                    wl = int(wl_str)
+                    wavelength_accumulator[wl] = wavelength_accumulator.get(wl, 0) + refl
+                    count[wl] = count.get(wl, 0) + 1
 
+            # Compute average reflectance per wavelength
+            wavelengths = sorted(wavelength_accumulator.keys())
+            reflectance = [wavelength_accumulator[wl] / count[wl] for wl in wavelengths]
+            self.wavelengths_arr.append(wavelengths)
+            self.reflectance_arr.append(reflectance)
 
-def plot_wavelengths_reflectance(wavelenghts, reflectance, lable):
-
-    # Ensure the output directory exists
-    output_dir = './data/figures/reflectance_v_wavelength/'
-    os.makedirs(output_dir, exist_ok=True) 
-
-    plt.figure()
-    x_label = 'Wavelength (nm)'
-    x_points = wavelenghts
-    y_label = 'Reflectance'
-    y_points = reflectance
-
-    plt.title(f"{lable}")
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
-    #reduce the number of ticks on the x axis
-    plt.xticks(np.arange(0, len(x_points), len(x_points)/10), fontsize=8)
-    
-    #save plot as a png file
-    plt.savefig(f'{output_dir}{lable}_wavelenght_reflectance_plot.png')
-    #plt.show() 
-    plt.figure()   
-    
-    # Plot the data
-    plt.plot(x_points, y_points)
+            self.plot_wavelengths_reflectance(wavelengths, reflectance, key)
+        self.group_lot_wavelengths_reflectance(sort_key) 
 
 if __name__ == '__main__':
     print("GO...")
@@ -150,14 +214,15 @@ if __name__ == '__main__':
         
     ]
     
-    data = Data(filenames) 
+    data = C_Data(filenames) 
     data.load_data()  
     dataDict = data.fill_dict()
-    dataDictSort = separate_dict_by_value('Conditions', dataDict) #separate the dict by genotype 
+    sort_key = 'Conditions'
+    dictManager = C_Dict_manager(dataDict)  
+    dataDictSort = dictManager.separate_dict_by_value(sort_key) #separate the dict by genotype 
     #for each entry to dataDictSort extract its wavelenght and reflectance to plot
-
-
-    
+    plotWR = C_Plot_Wavelenght_reflectance(dataDictSort) 
+    plotWR.plot_dict_wavelenghts() #group the wavelengths and reflectance by lables 
 
 #~~~~~~~~~~~~~~~~~~~~~ junk code ~~~~~~~~~~~~~~~~~~~~~~~
 #Accessing each entry to the dict 
