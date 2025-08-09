@@ -16,6 +16,10 @@ import pandas as pd
 import csv
 import matplotlib.pyplot as plt
 
+from sklearn.covariance import LedoitWolf
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 class C_Data:
     def __init__(self, filenames): 
         self.filenames = filenames
@@ -34,6 +38,7 @@ class C_Data:
             else:
                 print(f"Unsupported file format: {filename}")
         print("ALL files combined into: ", self.path)
+        return self.combined_df
         
     def combine_csvs(self, filename):
         new_df = pd.read_csv(filename)
@@ -45,7 +50,8 @@ class C_Data:
             new_df = new_df.iloc[:, 1:]
             self.combined_df = pd.concat([self.combined_df, new_df], axis=1)
         
-        self.remove_wavelengths()  
+        self.remove_wavelengths() 
+        self.combine_df.drop(columns=['Year']) 
         self.combined_df.to_csv(self.path, index=False)
     
     def remove_wavelengths(self):
@@ -58,12 +64,16 @@ class C_Data:
                 #remove the row from the data frame
                 self.combined_df = self.combined_df.drop(columns=[wavelenght])
     
+    #remove year, genotype, all wavelenghts, ect  
+
     def fill_dict(self):
         
         headers = self.combined_df.columns.tolist()
         headers_excluding_wavelenght = [header for header in headers if not header.isnumeric()]
         headers_wavelenght = [header for header in headers if header.isnumeric()] 
+
         headers_traits = headers_excluding_wavelenght[4:]  # Assuming first 4 are ID, Genotype, Year, Conditions
+        #TODO: how to exclude HS traits from given traits? 
 
         for index, row in self.combined_df.iterrows():
             id = row['ID']
@@ -73,6 +83,7 @@ class C_Data:
                     'Year': row['Year'],
                     'Conditions': row['Conditions'],
                     'Traits': {},
+                    #'HS_Traits': {}, 
                     'Wavelengths': {}
                 }
             # Fill traits
@@ -111,7 +122,7 @@ class C_Dict_manager:
             sortedDict[value][id] = entry
         #write to txt file (sorted_dict) 
         
-        #write_dict_to_file(sortedDict, value_key)
+        self.write_dict_to_file(self.inital_dict, value_key) 
 
         return sortedDict 
 
@@ -182,7 +193,7 @@ class C_Plot_Wavelenght_reflectance:
         
         plt.close()   
 
-    def plot_dict_wavelenghts(self):
+    def plot_dict_wavelenghts(self, sort_key):
 
         for key, entries in self.dataDictSort.items():
             # Dictionary to accumulate reflectance values per wavelength
@@ -205,25 +216,36 @@ class C_Plot_Wavelenght_reflectance:
             self.plot_wavelengths_reflectance(wavelengths, reflectance, key)
         self.group_lot_wavelengths_reflectance(sort_key) 
 
-if __name__ == '__main__':
+class C_Covariance_analysis:
+    def __init__(self, init_df):
+        self.init_df = init_df
+
+
+if __name__ == '__main__': 
     print("GO...")
     filenames = [
         'data/maize_2018_2019_unl_metadata.csv',
         'data/maize_2018_2019_unl_traits.csv', 
+        #'data/maize_2018_2019_unl_additional_traits.csv'
         'data/maize_2018_2019_unl_spectra.csv' 
         
     ]
     
     data = C_Data(filenames) 
-    data.load_data()  
+    df = data.load_data()  
     dataDict = data.fill_dict()
+
+    covar_analysis = C_Covariance_analysis(df)
+    covar_analysis.compute_covariance()
+
+"""
     sort_key = 'Conditions'
     dictManager = C_Dict_manager(dataDict)  
     dataDictSort = dictManager.separate_dict_by_value(sort_key) #separate the dict by genotype 
     #for each entry to dataDictSort extract its wavelenght and reflectance to plot
-    plotWR = C_Plot_Wavelenght_reflectance(dataDictSort) 
-    plotWR.plot_dict_wavelenghts() #group the wavelengths and reflectance by lables 
-
+    plotWR = C_Plot_Wavelenght_reflectance(dataDictSort)  
+    plotWR.plot_dict_wavelenghts(sort_key) #group the wavelengths and reflectance by lables 
+""" 
 #~~~~~~~~~~~~~~~~~~~~~ junk code ~~~~~~~~~~~~~~~~~~~~~~~
 #Accessing each entry to the dict 
 #print(dataDict[1])      
