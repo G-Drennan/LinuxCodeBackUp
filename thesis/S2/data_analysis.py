@@ -225,16 +225,15 @@ class C_Covariance_analysis:
         self.init_dict = init_dict
 
         scaler = StandardScaler()
-
         self.samples = scaler.fit_transform(samples)  # 2D array: samples x features
         self.features_names = features_names  # List of feature names
 
         self.output_dir = './data/figures/covariance/'
         os.makedirs(self.output_dir, exist_ok=True)  
 
-    def update_samples_features(self, samples, features):
+    def update_samples_features(self, samples, features_names):
         self.samples = samples
-        self.features = features
+        self.features_names = features_names 
     
     def perform_covariance_analysis(self, name): #, samples_name = 'Samples', features_name = 'Features' 
         # Ensure the output directory exists
@@ -248,9 +247,10 @@ class C_Covariance_analysis:
             yticklabels=self.features_names 
         )
         plt.title('Covariance Matrix') 
-        plt.show()
+        
         #save to self.output_dir
         plt.savefig(f'{self.output_dir}covariance_matrix_{name}.png')
+        plt.show() 
         plt.close()  # Close the plot to free memory
         print(f"Covariance matrix saved to {self.output_dir}covariance_matrix_{name}.png")
 
