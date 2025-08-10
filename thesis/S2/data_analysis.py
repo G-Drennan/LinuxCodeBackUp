@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns  
 
 from sklearn.covariance import EmpiricalCovariance
+from sklearn.preprocessing import StandardScaler 
 
 class C_Data:
     def __init__(self, filenames): 
@@ -51,8 +52,8 @@ class C_Data:
             new_df = new_df.iloc[:, 1:]
             self.combined_df = pd.concat([self.combined_df, new_df], axis=1)
         
-        self.remove_wavelengths() 
-        self.combine_df.drop(columns=['Year']) 
+        self.remove_wavelengths()  
+        self.combined_df.drop(columns=['Year']) 
         self.combined_df.to_csv(self.path, index=False)
     
     def remove_wavelengths(self):
@@ -219,22 +220,39 @@ class C_Plot_Wavelenght_reflectance:
 
  
 class C_Covariance_analysis:
-    def __init__(self, init_df, init_dict, samples=[], features=[]):
+    def __init__(self, init_df, init_dict, samples=[], features_names=[]):
         self.init_df = init_df
         self.init_dict = init_dict
-        self.samples_features = (samples, features)
+
+        scaler = StandardScaler()
+
+        self.samples = scaler.fit_transform(samples)  # 2D array: samples x features
+        self.features_names = features_names  # List of feature names
+
+        self.output_dir = './data/figures/covariance/'
+        os.makedirs(self.output_dir, exist_ok=True)  
+
     def update_samples_features(self, samples, features):
-        self.samples_features = (samples, features)
+        self.samples = samples
+        self.features = features
     
-    def perform_covariance_analysis(self, samples_name = 'Samples', features_name = 'Features'):
-        cov = EmpiricalCovariance().fit(self.samples_features)
-
-        sns.heatmap(cov.covariance_, annot=True, cmap='coolwarm', square=True)
-        plt.title('Covariance Matrix')
-        plt.x_label(samples_name)
-        plt.y_label(features_name) 
-        plt.show() 
-
+    def perform_covariance_analysis(self, name): #, samples_name = 'Samples', features_name = 'Features' 
+        # Ensure the output directory exists
+        cov = EmpiricalCovariance().fit(self.samples)
+        sns.heatmap(
+            cov.covariance_,
+            annot=True,
+            cmap='coolwarm',
+            square=True,
+            xticklabels=self.features_names,
+            yticklabels=self.features_names 
+        )
+        plt.title('Covariance Matrix') 
+        plt.show()
+        #save to self.output_dir
+        plt.savefig(f'{self.output_dir}covariance_matrix_{name}.png')
+        plt.close()  # Close the plot to free memory
+        print(f"Covariance matrix saved to {self.output_dir}covariance_matrix_{name}.png")
 
 if __name__ == '__main__':  
     print("GO...")
@@ -249,9 +267,15 @@ if __name__ == '__main__':
     data = C_Data(filenames) 
     df = data.load_data()  
     dataDict = data.fill_dict()
+    # Prepare data for covariance analysis on traits
+    trait_names = list(next(iter(dataDict.values()))['Traits'].keys())
+    samples = []
+    for entry in dataDict.values():
+        samples.append([entry['Traits'][trait] for trait in trait_names])
 
-    covar_analysis = C_Covariance_analysis(df)
-    covar_analysis.compute_covariance()
+    covar_analysis = C_Covariance_analysis(df, dataDict, samples, trait_names) 
+    covar_analysis.perform_covariance_analysis('Traits')  
+
 
 """
     sort_key = 'Conditions'
