@@ -11,14 +11,15 @@
 #class to hold data e.g dict
 #import matplotlib.pyplot as plt
 import numpy as np
+
 import os
 import pandas as pd
 import csv
-import matplotlib.pyplot as plt
 
-from sklearn.covariance import LedoitWolf
-import seaborn as sns
 import matplotlib.pyplot as plt
+import seaborn as sns  
+
+from sklearn.covariance import EmpiricalCovariance
 
 class C_Data:
     def __init__(self, filenames): 
@@ -216,12 +217,26 @@ class C_Plot_Wavelenght_reflectance:
             self.plot_wavelengths_reflectance(wavelengths, reflectance, key)
         self.group_lot_wavelengths_reflectance(sort_key) 
 
+ 
 class C_Covariance_analysis:
-    def __init__(self, init_df):
+    def __init__(self, init_df, init_dict, samples=[], features=[]):
         self.init_df = init_df
+        self.init_dict = init_dict
+        self.samples_features = (samples, features)
+    def update_samples_features(self, samples, features):
+        self.samples_features = (samples, features)
+    
+    def perform_covariance_analysis(self, samples_name = 'Samples', features_name = 'Features'):
+        cov = EmpiricalCovariance().fit(self.samples_features)
+
+        sns.heatmap(cov.covariance_, annot=True, cmap='coolwarm', square=True)
+        plt.title('Covariance Matrix')
+        plt.x_label(samples_name)
+        plt.y_label(features_name) 
+        plt.show() 
 
 
-if __name__ == '__main__': 
+if __name__ == '__main__':  
     print("GO...")
     filenames = [
         'data/maize_2018_2019_unl_metadata.csv',
