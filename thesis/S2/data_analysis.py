@@ -1,15 +1,11 @@
-#TODO: Extract data from the csv's in the data folder. Stort by Conditions and Genotype. 
 #CSV files: data/maize_2018_2019_unl_metadata.csv, data/maize_2018_2019_unl_spectra.csv, data/maize_2018_2019_unl_traits.csv
 
-#TODO: perform wavelength reflectance plot, PCA, correlation analysis
+#TODO:  PCA 
 
 #TODO: sort into test and training data sets 40% - 60% split. Keep consistance for mulit differnt combinations of x and y data. 
     #   where Y data is always the given VI found in data/maize_2018_2019_unl_traits.csv
 
-#TODO: dict = {[ID]: traits = [(header, value)...], wavelenght relfectance [(wavelenght/header, reflectance value)], Genotype}
 
-#class to hold data e.g dict
-#import matplotlib.pyplot as plt
 import numpy as np
 
 import os
@@ -71,10 +67,7 @@ class C_Data:
     #remove year, genotype, all wavelenghts, ect  
 
     def extract_headers(self):
-        """headers = self.combined_df.columns.tolist()
-        headers_excluding_wavelenght = [header for header in headers if not header.isnumeric()]
-        headers_wavelenght = [header for header in headers if header.isnumeric()] """
-        #do this headers_traits = headers_excluding_wavelenght[4:]  # Assuming first 4 are ID, Genotype, Year, Conditions but by usning the headers from the data frame
+
         headers = self.combined_df.columns.tolist()
         headers_excluding_wavelenght = [header for header in headers if not header.isnumeric()]
         headers_wavelenght = [header for header in headers if header.isnumeric()]
@@ -104,17 +97,9 @@ class C_Data:
         
 
         headers_all = self.extract_headers() #each entry is a differnt set of headers
-        """
-        headers = 
-        [['Genotype', 'Year', 'Conditions'], 
-        ['Nitrogen', 'Phosphorus', 'Potassium', 'Chlorophyll', 'Leaf_Dry_Weight', 'Leaf_Fresh_Weight', 'Leaf_Area'], 
-        ['Leaf Structure Index', 'Chlorophyll index', 'Water index', 'Cellulose Absorption Index', 'Nitrogen Related Index NRI1510', 'Nitrogen Related Index NRI850', 'Disease Water Stress Index 1', 'Disease Water Stress Index 2', 'Disease Water Stress Index 3', 'Disease Water Stress Index 4', 'Disease Water Stress Index 5', 'Chlorophyll content'], 
-        ['450', '451', '452', '453', '454', '455', '456', '457', '458', '459', '460', '461', '462', '463', '464', '465', '466', '467', '468', '469', '470', '471', '472', '473', '474', '475', '476', '477', '478', '479', '480', '481', '482', '483', '484', '485', '486', '487', '488', '489', '490', '491', '492', '493', '494', '495', '496', '497', '498', '499', '500', '501', '502', '503', '504', '505', '506', '507', '508', '509', '510', '511', '512', '513', '514', '515', '516', '517', '518', '519', '520', '521', '522', '523', '524', '525', '526', '527', '528', '529', '530', '531', '532', '533', ... ]] 
-        """
 
-            # Assume first 4 columns are: ID, Genotype, Year, Conditions
         metadata_headers = headers_all[0]
-        trait_headers = headers_all[1]  # define N_traits appropriately
+        trait_headers = headers_all[1]
         hs_trait_headers = headers_all[2]
         headers_wavelenght = headers_all[3]  
 
@@ -122,7 +107,7 @@ class C_Data:
             id = row['ID']
             if id not in self.dataDict:
                 self.dataDict[id] = {
-                    'Metadata': {}, #headers 0, need in form { header_1:value, header_2:value}
+                    'Metadata': {}, #headers 0, 
                     'Traits': {}, #headers 1
                     'HS_Traits': {}, #headers 2
                     'Wavelengths': {} #headers 3
@@ -338,19 +323,3 @@ if __name__ == '__main__':
  
 
 #~~~~~~~~~~~~~~~~~~~~~ junk code ~~~~~~~~~~~~~~~~~~~~~~~
-#Accessing each entry to the dict 
-#print(dataDict[1])      
-    #access each entry in the dict
-    #for id, entry in dataDict.items():
-        #print(f"ID: {id}, Genotype: {entry['Genotype']}, Year: {entry['Year']}, Conditions: {entry['Conditions']}")
-        #print("Traits:", entry['Traits'])
-        #for vi, value in entry['Traits'].items():
-        #    print(f"{vi}:{value}") 
-        #print("Wavelengths:", entry['Wavelengths'])
-
-        #break """ 
-
-#self.dataDict
-#self.combined_df 
-#print(self.combined_df.loc[0]) #counting stars from zero. 
-#print(self.combined_df.at[0,'ID'])   
