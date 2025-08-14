@@ -19,7 +19,10 @@ from sklearn.covariance import EmpiricalCovariance
 from sklearn.preprocessing import StandardScaler 
 
 class C_Data:
-    def __init__(self, filenames, wavelenght_min = 450): 
+    def __init__(self, filenames,filenames_keys, wavelenght_min = 450): 
+        if len(filenames_keys)-1 != len(filenames):
+            print("WARN: key not same lenght as file names")
+            
         self.filenames = filenames
         self.dataDict = {}
         self.firstCsv = True
@@ -27,6 +30,7 @@ class C_Data:
         self.combined_df = pd.DataFrame()
         self.all_df = []
         self.wavelenght_min = wavelenght_min 
+        self.filenames_keys = filenames_keys
 
     def load_data(self): 
         for filename in self.filenames: 
@@ -92,46 +96,23 @@ class C_Data:
     
         return headers_arr 
     
-    def fill_dict(self):
+    def fill_dict(self):   
         
-        
-
         headers_all = self.extract_headers() #each entry is a differnt set of headers
 
-        metadata_headers = headers_all[0]
-        trait_headers = headers_all[1]
-        hs_trait_headers = headers_all[2]
-        headers_wavelenght = headers_all[3]  
-
         for index, row in self.combined_df.iterrows():
-            id = row['ID']
+            id = row[self.filenames_keys[0]]
             if id not in self.dataDict:
-                self.dataDict[id] = {
-                    'Metadata': {}, #headers 0, 
-                    'Traits': {}, #headers 1
-                    'HS_Traits': {}, #headers 2
-                    'Wavelengths': {} #headers 3
-                }
+                self.dataDict[id] = {key: {} for key in self.filenames_keys[1:]}
                 # Fill Metadata
-            for header in metadata_headers:
-                self.dataDict[id]['Metadata'][header] = row[header]
-
-            # Fill Traits
-            trait_start = len(metadata_headers) +1  
-            trait_end = trait_start + len(trait_headers)
-            for trait, value in zip(trait_headers, row[trait_start:trait_end]):
-                self.dataDict[id]['Traits'][trait] = value
-
-            # Fill HS_Traits
-            hs_start = trait_end
-            hs_end = hs_start + len(hs_trait_headers)
-            for hs_trait, value in zip(hs_trait_headers, row[hs_start:hs_end]):
-                self.dataDict[id]['HS_Traits'][hs_trait] = value
-
-            # Fill Wavelengths
-            for wavelength, value in zip(headers_wavelenght, row[hs_end:]):
-                self.dataDict[id]['Wavelengths'][wavelength] = value 
-
+            start = 0
+            end = 0
+            count = 0
+            
+            for key, headers in zip(self.filenames_keys[1:], headers_all):
+                for header in headers:
+                    self.dataDict[id][key][header] = row[header] 
+            
         return self.dataDict   
 
 #~~~~~~~~~~~~~~~~~~~~ dict ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -143,7 +124,7 @@ class C_Dict_manager:
     def get_dict(self):
         return self.inital_dict
     
-    def separate_dict_by_value(self, value_key, main_key = 'Metadata'):
+    def separate_dict_by_value(self, value_key, main_key):
         #break the dict into parts based of value such as genotype or contitions, ensuring each dict entires share the same value
         #the new dict still uses ID as the key, but the value is a list of entries that share the same value for the given key
         #e.g data_dict_1 = {id, genotype: A, ...}, data_dict_2 = {id, genotype: B, ...}
@@ -229,7 +210,7 @@ class C_Plot_Wavelenght_reflectance:
         
         plt.close()   
 
-    def plot_dict_wavelenghts(self, sort_key):
+    def plot_dict_wavelenghts(self, sort_key, dict_key):
 
         for key, entries in self.dataDictSort.items():
             # Dictionary to accumulate reflectance values per wavelength
@@ -238,7 +219,7 @@ class C_Plot_Wavelenght_reflectance:
             self.lables.append(key) 
 
             for entry in entries.values(): 
-                for wl_str, refl in entry['Wavelengths'].items():
+                for wl_str, refl in entry[dict_key].items():
                     wl = int(wl_str)
                     wavelength_accumulator[wl] = wavelength_accumulator.get(wl, 0) + refl
                     count[wl] = count.get(wl, 0) + 1
@@ -297,29 +278,36 @@ if __name__ == '__main__':
         'data/maize_2018_2019_unl_spectra.csv'  
         
     ]
+    filenames_keys = [
+        'ID', 
+        'Metadata',
+        'Traits',
+        'Hs_Traits',
+        'Spectra'
+    ]
     
-    data = C_Data(filenames)  
+    data = C_Data(filenames, filenames_keys)  
     df = data.load_data()  
 
     dataDict = data.fill_dict()
+    dictManager = C_Dict_manager(dataDict)  
+    dictManager.write_dict_to_file(dataDict, 'data') 
 
-    
-    
     # Prepare data for covariance analysis on traits
-    trait_names = list(next(iter(dataDict.values()))['Traits'].keys())
+    trait_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())
     samples = []
     for entry in dataDict.values():
-        samples.append([entry['Traits'][trait] for trait in trait_names])
+        samples.append([entry[filenames_keys[2]][trait] for trait in trait_names])
 
     covar_analysis = C_Covariance_analysis(df, dataDict, samples, trait_names) 
-    covar_analysis.perform_covariance_analysis('Traits') 
-
+    covar_analysis.perform_covariance_analysis(filenames_keys[2]) 
+ 
     sort_key = 'Conditions'
-    dictManager = C_Dict_manager(dataDict)  
-    dataDictSort = dictManager.separate_dict_by_value(sort_key) #separate the dict by genotype 
+    
+    dataDictSort = dictManager.separate_dict_by_value(sort_key, filenames_keys[1]) #separate the dict by genotype 
     #for each entry to dataDictSort extract its wavelenght and reflectance to plot
-    plotWR = C_Plot_Wavelenght_reflectance(dataDictSort)  
-    plotWR.plot_dict_wavelenghts(sort_key) #group the wavelengths and reflectance by lables 
+    plotWR = C_Plot_Wavelenght_reflectance(dataDictSort)   
+    plotWR.plot_dict_wavelenghts(sort_key, filenames_keys[4]) #group the wavelengths and reflectance by lables """   
  
 
 #~~~~~~~~~~~~~~~~~~~~~ junk code ~~~~~~~~~~~~~~~~~~~~~~~
