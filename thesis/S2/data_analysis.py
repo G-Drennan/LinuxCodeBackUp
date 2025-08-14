@@ -23,13 +23,14 @@ from sklearn.covariance import EmpiricalCovariance
 from sklearn.preprocessing import StandardScaler 
 
 class C_Data:
-    def __init__(self, filenames): 
+    def __init__(self, filenames, wavelenght_min = 450): 
         self.filenames = filenames
         self.dataDict = {}
         self.firstCsv = True
-        self.path = 'data/combined_data.csv'
-        self.combined_df = pd.DataFrame() 
-        self.wavelenght_min = 450 
+        self.path = 'data/combined_data.csv' 
+        self.combined_df = pd.DataFrame()
+        self.all_df = []
+        self.wavelenght_min = wavelenght_min 
 
     def load_data(self): 
         for filename in self.filenames: 
@@ -44,6 +45,7 @@ class C_Data:
         
     def combine_csvs(self, filename):
         new_df = pd.read_csv(filename)
+        self.all_df.append(new_df)  # Store the dataframe for later use
         if self.firstCsv:
             self.firstCsv = False
             self.combined_df = new_df
@@ -68,37 +70,83 @@ class C_Data:
     
     #remove year, genotype, all wavelenghts, ect  
 
-    def fill_dict(self):
-        
+    def extract_headers(self):
+        """headers = self.combined_df.columns.tolist()
+        headers_excluding_wavelenght = [header for header in headers if not header.isnumeric()]
+        headers_wavelenght = [header for header in headers if header.isnumeric()] """
+        #do this headers_traits = headers_excluding_wavelenght[4:]  # Assuming first 4 are ID, Genotype, Year, Conditions but by usning the headers from the data frame
         headers = self.combined_df.columns.tolist()
         headers_excluding_wavelenght = [header for header in headers if not header.isnumeric()]
-        headers_wavelenght = [header for header in headers if header.isnumeric()] 
+        headers_wavelenght = [header for header in headers if header.isnumeric()]
 
-        headers_traits = headers_excluding_wavelenght[4:]  # Assuming first 4 are ID, Genotype, Year, Conditions
-        #TODO: how to exclude HS traits from given traits? 
+        headers_arr = []
+
+        for dfx in self.all_df:
+            # if  is not numeric 
+            current_headers = dfx.columns.tolist()
+            is_numerioc = 0 
+            for header in current_headers:
+                if header.isnumeric():
+                    #headers_arr.append(new_headers)
+                    is_numerioc = 1 
+                    break 
+            if is_numerioc:
+                headers_arr.append(headers_wavelenght) 
+            else:
+                new_headers = [n_h for n_h in headers_excluding_wavelenght if n_h in current_headers and n_h != 'ID'] 
+                headers_arr.append(new_headers)
+
+    
+        return headers_arr 
+    
+    def fill_dict(self):
+        
+        
+
+        headers_all = self.extract_headers() #each entry is a differnt set of headers
+        """
+        headers = 
+        [['Genotype', 'Year', 'Conditions'], 
+        ['Nitrogen', 'Phosphorus', 'Potassium', 'Chlorophyll', 'Leaf_Dry_Weight', 'Leaf_Fresh_Weight', 'Leaf_Area'], 
+        ['Leaf Structure Index', 'Chlorophyll index', 'Water index', 'Cellulose Absorption Index', 'Nitrogen Related Index NRI1510', 'Nitrogen Related Index NRI850', 'Disease Water Stress Index 1', 'Disease Water Stress Index 2', 'Disease Water Stress Index 3', 'Disease Water Stress Index 4', 'Disease Water Stress Index 5', 'Chlorophyll content'], 
+        ['450', '451', '452', '453', '454', '455', '456', '457', '458', '459', '460', '461', '462', '463', '464', '465', '466', '467', '468', '469', '470', '471', '472', '473', '474', '475', '476', '477', '478', '479', '480', '481', '482', '483', '484', '485', '486', '487', '488', '489', '490', '491', '492', '493', '494', '495', '496', '497', '498', '499', '500', '501', '502', '503', '504', '505', '506', '507', '508', '509', '510', '511', '512', '513', '514', '515', '516', '517', '518', '519', '520', '521', '522', '523', '524', '525', '526', '527', '528', '529', '530', '531', '532', '533', ... ]] 
+        """
+
+            # Assume first 4 columns are: ID, Genotype, Year, Conditions
+        metadata_headers = headers_all[0]
+        trait_headers = headers_all[1]  # define N_traits appropriately
+        hs_trait_headers = headers_all[2]
+        headers_wavelenght = headers_all[3]  
 
         for index, row in self.combined_df.iterrows():
             id = row['ID']
             if id not in self.dataDict:
                 self.dataDict[id] = {
-                    'Genotype': row['Genotype'],
-                    'Year': row['Year'],
-                    'Conditions': row['Conditions'],
-                    'Traits': {},
-                    #'HS_Traits': {}, 
-                    'Wavelengths': {}
+                    'Metadata': {}, #headers 0, need in form { header_1:value, header_2:value}
+                    'Traits': {}, #headers 1
+                    'HS_Traits': {}, #headers 2
+                    'Wavelengths': {} #headers 3
                 }
-            # Fill traits
-            for trait, value in zip(headers_traits, row[4:4+len(headers_traits)]):
+                # Fill Metadata
+            for header in metadata_headers:
+                self.dataDict[id]['Metadata'][header] = row[header]
+
+            # Fill Traits
+            trait_start = len(metadata_headers) +1  
+            trait_end = trait_start + len(trait_headers)
+            for trait, value in zip(trait_headers, row[trait_start:trait_end]):
                 self.dataDict[id]['Traits'][trait] = value
-            
-            # Fill wavelengths
-            for wavelength, value in zip(headers_wavelenght, row[4+len(headers_traits):]):
-                self.dataDict[id]['Wavelengths'][wavelength] = value
-        #print("Data dictionary filled with", len(self.dataDict), "entries.")   
-        #print only the keys to self.dataDict = {}
-        #print(list(self.dataDict.keys()))
-        #print(self.dataDict[1])  
+
+            # Fill HS_Traits
+            hs_start = trait_end
+            hs_end = hs_start + len(hs_trait_headers)
+            for hs_trait, value in zip(hs_trait_headers, row[hs_start:hs_end]):
+                self.dataDict[id]['HS_Traits'][hs_trait] = value
+
+            # Fill Wavelengths
+            for wavelength, value in zip(headers_wavelenght, row[hs_end:]):
+                self.dataDict[id]['Wavelengths'][wavelength] = value 
+
         return self.dataDict   
 
 #~~~~~~~~~~~~~~~~~~~~ dict ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -110,15 +158,16 @@ class C_Dict_manager:
     def get_dict(self):
         return self.inital_dict
     
-    def separate_dict_by_value(self, value_key):
+    def separate_dict_by_value(self, value_key, main_key = 'Metadata'):
         #break the dict into parts based of value such as genotype or contitions, ensuring each dict entires share the same value
         #the new dict still uses ID as the key, but the value is a list of entries that share the same value for the given key
         #e.g data_dict_1 = {id, genotype: A, ...}, data_dict_2 = {id, genotype: B, ...}
-        
+
+
         #sort the dict by the value_key 
         sortedDict = {}
         for id, entry in self.inital_dict.items():
-            value = entry[value_key]
+            value = entry[main_key][value_key]
             if value not in sortedDict: 
                 sortedDict[value] = {}
             sortedDict[value][id] = entry
@@ -165,7 +214,7 @@ class C_Plot_Wavelenght_reflectance:
         #save to imae
         plt.savefig(f'{output_dir}grouped_wavelengths_reflectance_plot_by_{sort_key}.png')
         plt.show() 
-        plt.close() 
+        plt.close()  
 
     def plot_wavelengths_reflectance(self, wavelenghts, reflectance, lable):
 
@@ -216,7 +265,7 @@ class C_Plot_Wavelenght_reflectance:
             self.reflectance_arr.append(reflectance)
 
             self.plot_wavelengths_reflectance(wavelengths, reflectance, key)
-        self.group_lot_wavelengths_reflectance(sort_key) 
+        self.group_lot_wavelengths_reflectance(sort_key)  
 
  
 class C_Covariance_analysis:
@@ -259,14 +308,18 @@ if __name__ == '__main__':
     filenames = [
         'data/maize_2018_2019_unl_metadata.csv',
         'data/maize_2018_2019_unl_traits.csv', 
-        #'data/maize_2018_2019_unl_additional_traits.csv'
-        'data/maize_2018_2019_unl_spectra.csv' 
+        'data/maize_2018_2019_unl_additional_traits.csv', 
+        'data/maize_2018_2019_unl_spectra.csv'  
         
     ]
     
-    data = C_Data(filenames) 
+    data = C_Data(filenames)  
     df = data.load_data()  
+
     dataDict = data.fill_dict()
+
+    
+    
     # Prepare data for covariance analysis on traits
     trait_names = list(next(iter(dataDict.values()))['Traits'].keys())
     samples = []
@@ -274,17 +327,16 @@ if __name__ == '__main__':
         samples.append([entry['Traits'][trait] for trait in trait_names])
 
     covar_analysis = C_Covariance_analysis(df, dataDict, samples, trait_names) 
-    covar_analysis.perform_covariance_analysis('Traits')  
+    covar_analysis.perform_covariance_analysis('Traits') 
 
-
-"""
     sort_key = 'Conditions'
     dictManager = C_Dict_manager(dataDict)  
     dataDictSort = dictManager.separate_dict_by_value(sort_key) #separate the dict by genotype 
     #for each entry to dataDictSort extract its wavelenght and reflectance to plot
     plotWR = C_Plot_Wavelenght_reflectance(dataDictSort)  
     plotWR.plot_dict_wavelenghts(sort_key) #group the wavelengths and reflectance by lables 
-""" 
+ 
+
 #~~~~~~~~~~~~~~~~~~~~~ junk code ~~~~~~~~~~~~~~~~~~~~~~~
 #Accessing each entry to the dict 
 #print(dataDict[1])      
