@@ -19,18 +19,19 @@ from sklearn.covariance import EmpiricalCovariance
 from sklearn.preprocessing import StandardScaler 
 
 class C_Data:
-    def __init__(self, filenames,filenames_keys, wavelenght_min = 450): 
+    def __init__(self, filenames,filenames_keys, drop_list = [], wavelenght_min = 450): 
         if len(filenames_keys)-1 != len(filenames):
             print("WARN: key not same lenght as file names")
             
         self.filenames = filenames
         self.dataDict = {}
         self.firstCsv = True
-        self.path = 'data/combined_data.csv' 
+        self.path = 'data/combined_data.csv'  
         self.combined_df = pd.DataFrame()
         self.all_df = []
         self.wavelenght_min = wavelenght_min 
         self.filenames_keys = filenames_keys
+        self.drop_list = drop_list  
 
     def load_data(self): 
         for filename in self.filenames: 
@@ -54,10 +55,14 @@ class C_Data:
             new_df = new_df.iloc[:, 1:]
             self.combined_df = pd.concat([self.combined_df, new_df], axis=1)
         
-        self.remove_wavelengths()  
-        self.combined_df.drop(columns=['Year']) 
+        self.remove_cols()
         self.combined_df.to_csv(self.path, index=False)
     
+    def remove_cols(self):
+        for header in self.drop_list:
+            self.combined_df.drop(columns=[header]) 
+        self.remove_wavelengths()  
+
     def remove_wavelengths(self):
         headers = self.combined_df.columns.tolist()
         headers_excluding_wavelenght = [header for header in headers if not header.isnumeric()]
@@ -90,7 +95,7 @@ class C_Data:
             if is_numerioc:
                 headers_arr.append(headers_wavelenght) 
             else:
-                new_headers = [n_h for n_h in headers_excluding_wavelenght if n_h in current_headers and n_h != 'ID'] 
+                new_headers = [n_h for n_h in headers_excluding_wavelenght if n_h in current_headers and n_h != self.filenames_keys[0]]  
                 headers_arr.append(new_headers)
 
     
@@ -285,9 +290,9 @@ if __name__ == '__main__':
         'Hs_Traits',
         'Spectra'
     ]
-    
+     
     data = C_Data(filenames, filenames_keys)  
-    df = data.load_data()  
+    df = data.load_data()   
 
     dataDict = data.fill_dict()
     dictManager = C_Dict_manager(dataDict)  
