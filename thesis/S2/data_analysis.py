@@ -18,8 +18,8 @@ import seaborn as sns
 from sklearn.covariance import EmpiricalCovariance
 from sklearn.preprocessing import StandardScaler 
 from sklearn.decomposition import PCA 
-from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedShuffleSplit
+from collections import Counter
 
 class C_Data:
     def __init__(self, filenames,filenames_keys, drop_list = [], wavelenght_min = 450): 
@@ -284,6 +284,7 @@ class C_analysis:
 class C_Regression:
     def __init__(self, dataDict):
         self.dataDict = dataDict
+        self.training_sets_made = False
 
     def extract_features(self, main_key): 
         sample_entry = next(iter(self.dataDict.values()))[main_key]
@@ -307,12 +308,18 @@ class C_Regression:
         #self.y = np.array(y) 
         return np.array(y), trait_name
 
-    def make_training_n_test_sets(self, conditions, features_key, class_main_key, class_name, test_size=0.4):
+    def make_training_n_test_sets(self, features_key, class_main_key, class_name, test_size=0.4, conditions_name = 'Conditions', conditions_key = 'Metadata'):
         
         x, keys = self.extract_features(features_key)
         y, trait_key = self.extract_class(class_main_key, class_name)
+        conditions, _ = self.extract_class(conditions_key, conditions_name)  
         
-        x_train, x_test, y_train, y_test, cond_train, cond_test = self.stratified_split(x, y, conditions, test_size)
+        x_train, x_test, y_train, y_test, self.cond_train, self.cond_test = self.stratified_split(x, y, conditions, test_size)
+
+        #prove that the split is stratified
+        print("Training set size:", len(x_train), "Test set size:", len(x_test))
+        self.training_sets_made = True 
+
         return x_train, x_test, y_train, y_test, keys, trait_key 
     
     def stratified_split(self, x, y, conditions, test_size=0.4):
@@ -322,7 +329,22 @@ class C_Regression:
             y_train, y_test = y[train_idx], y[test_idx]
             cond_train, cond_test = np.array(conditions)[train_idx], np.array(conditions)[test_idx]
             return x_train, x_test, y_train, y_test, cond_train, cond_test
+    
+    def condition_distribution(self):
+        if self.training_sets_made:
+            print("Unique conditions in test set:", np.unique(self.cond_train))
+            
+            train_counts = Counter(self.cond_train)
+            test_counts = Counter(self.cond_test)
+            all_conditions = sorted(set(self.cond_train) | set(self.cond_test))
 
+            print("\nCondition distribution (% in test set):")
+            for cond in all_conditions:
+                train_n = train_counts.get(cond, 0)
+                test_n = test_counts.get(cond, 0)
+                total = train_n + test_n
+                pct_test = 100 * test_n / total if total > 0 else 0
+                print(f"  {cond}: {test_n}/{total} ({pct_test:.1f}%) in test") 
 
 if __name__ == '__main__':  
     print("GO...")
@@ -357,6 +379,11 @@ if __name__ == '__main__':
     #for each entry to dataDictSort extract its wavelenght and reflectance to plot
     plotWR = C_Plot_Wavelenght_reflectance(dataDictSort)   
     plotWR.plot_dict_wavelenghts(sort_key, filenames_keys[4]) #group the wavelengths and reflectance by lables
+
+    features_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())
+    reg = C_Regression(dataDict)
+    reg.make_training_n_test_sets(filenames_keys[3], filenames_keys[2], features_names[2])
+    reg.condition_distribution() 
 
 
    
