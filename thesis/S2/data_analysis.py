@@ -17,6 +17,9 @@ import seaborn as sns
 
 from sklearn.covariance import EmpiricalCovariance
 from sklearn.preprocessing import StandardScaler 
+from sklearn.decomposition import PCA 
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedShuffleSplit
 
 class C_Data:
     def __init__(self, filenames,filenames_keys, drop_list = [], wavelenght_min = 450): 
@@ -42,7 +45,7 @@ class C_Data:
             else:
                 print(f"Unsupported file format: {filename}")
         print("ALL files combined into: ", self.path)
-        return self.combined_df
+        return self.combined_df, self.fill_dict()
         
     def combine_csvs(self, filename):
         new_df = pd.read_csv(filename)
@@ -237,42 +240,89 @@ class C_Plot_Wavelenght_reflectance:
 
             self.plot_wavelengths_reflectance(wavelengths, reflectance, key)
         self.group_lot_wavelengths_reflectance(sort_key)  
-
+    
  
-class C_Covariance_analysis:
-    def __init__(self, init_df, init_dict, samples=[], features_names=[]):
+class C_analysis:
+    def __init__(self, init_df, init_dict):
         self.init_df = init_df
         self.init_dict = init_dict
-
-        scaler = StandardScaler()
-        self.samples = scaler.fit_transform(samples)  # 2D array: samples x features
-        self.features_names = features_names  # List of feature names
-
-        self.output_dir = './data/figures/covariance/'
-        os.makedirs(self.output_dir, exist_ok=True)  
+        self.output_dir_covariance = './data/figures/covariance/'
+        os.makedirs(self.output_dir_covariance, exist_ok=True)   
 
     def update_samples_features(self, samples, features_names):
         self.samples = samples
         self.features_names = features_names 
     
-    def perform_covariance_analysis(self, name): #, samples_name = 'Samples', features_name = 'Features' 
+    def perform_covariance_analysis(self, filenames_key): #, samples_name = 'Samples', features_name = 'Features' 
+        features_names = list(next(iter(self.init_dict.values()))[filenames_key].keys())
+        samples = []
+        for entry in self.init_dict.values():
+            samples.append([entry[filenames_key][trait] for trait in features_names])
+ 
+        scaler = StandardScaler()
+        samples = scaler.fit_transform(samples)  # 2D array: samples x features
+        
+        
         # Ensure the output directory exists
-        cov = EmpiricalCovariance().fit(self.samples)
+        cov = EmpiricalCovariance().fit(samples)
         sns.heatmap(
             cov.covariance_,
             annot=True,
             cmap='coolwarm',
             square=True,
-            xticklabels=self.features_names,
-            yticklabels=self.features_names 
+            xticklabels=features_names,
+            yticklabels=features_names 
         )
         plt.title('Covariance Matrix') 
         
         #save to self.output_dir
-        plt.savefig(f'{self.output_dir}covariance_matrix_{name}.png')
+        plt.savefig(f'{self.output_dir_covariance}covariance_matrix_{filenames_key}.png')
         plt.show() 
-        plt.close()  # Close the plot to free memory
-        print(f"Covariance matrix saved to {self.output_dir}covariance_matrix_{name}.png")
+        plt.close()  # Close the plot to free memory 
+        print(f"Covariance matrix saved to {self.output_dir_covariance}covariance_matrix_{filenames_key}.png")
+
+class C_Regression:
+    def __init__(self, dataDict):
+        self.dataDict = dataDict
+
+    def extract_features(self, main_key): 
+        sample_entry = next(iter(self.dataDict.values()))[main_key]
+    
+        # Check if keys are numeric 
+        try:
+            num_keys = sorted([int(k) for k in sample_entry.keys()])
+            keys = [str(k) for k in num_keys]
+            x = [[entry[main_key][str(k)] for k in keys] for entry in self.dataDict.values()]
+        except ValueError:
+            keys = list(sample_entry.keys())
+            x = [[entry[main_key][k] for k in keys] for entry in self.dataDict.values()]
+        
+        #self.x = np.array(x) 
+        return np.array(x), keys
+
+    def extract_class(self, main_key, trait_name):
+        y = []
+        for entry in self.dataDict.values(): 
+            y.append(entry[main_key][trait_name])
+        #self.y = np.array(y) 
+        return np.array(y), trait_name
+
+    def make_training_n_test_sets(self, conditions, features_key, class_main_key, class_name, test_size=0.4):
+        
+        x, keys = self.extract_features(features_key)
+        y, trait_key = self.extract_class(class_main_key, class_name)
+        
+        x_train, x_test, y_train, y_test, cond_train, cond_test = self.stratified_split(x, y, conditions, test_size)
+        return x_train, x_test, y_train, y_test, keys, trait_key 
+    
+    def stratified_split(self, x, y, conditions, test_size=0.4):
+        sss = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=42)
+        for train_idx, test_idx in sss.split(x, y=conditions):
+            x_train, x_test = x[train_idx], x[test_idx]
+            y_train, y_test = y[train_idx], y[test_idx]
+            cond_train, cond_test = np.array(conditions)[train_idx], np.array(conditions)[test_idx]
+            return x_train, x_test, y_train, y_test, cond_train, cond_test
+
 
 if __name__ == '__main__':  
     print("GO...")
@@ -285,34 +335,90 @@ if __name__ == '__main__':
     ]
     filenames_keys = [
         'ID', 
-        'Metadata',
+        'Metadata', 
         'Traits',
         'Hs_Traits',
         'Spectra'
     ]
      
     data = C_Data(filenames, filenames_keys)  
-    df = data.load_data()   
-
-    dataDict = data.fill_dict()
+    df, dataDict = data.load_data()
     dictManager = C_Dict_manager(dataDict)  
-    dictManager.write_dict_to_file(dataDict, 'data') 
-
-    # Prepare data for covariance analysis on traits
-    trait_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())
-    samples = []
-    for entry in dataDict.values():
-        samples.append([entry[filenames_keys[2]][trait] for trait in trait_names])
-
-    covar_analysis = C_Covariance_analysis(df, dataDict, samples, trait_names) 
-    covar_analysis.perform_covariance_analysis(filenames_keys[2]) 
- 
-    sort_key = 'Conditions'
     
+   
+    # Prepare data for covariance analysis on trait
+    Analysis = C_analysis(df, dataDict)  
+    Analysis.perform_covariance_analysis(filenames_keys[3])  
+
+    # Ploting spectra based off conditions
+    sort_key = 'Conditions'
+     
     dataDictSort = dictManager.separate_dict_by_value(sort_key, filenames_keys[1]) #separate the dict by genotype 
     #for each entry to dataDictSort extract its wavelenght and reflectance to plot
     plotWR = C_Plot_Wavelenght_reflectance(dataDictSort)   
-    plotWR.plot_dict_wavelenghts(sort_key, filenames_keys[4]) #group the wavelengths and reflectance by lables """   
- 
+    plotWR.plot_dict_wavelenghts(sort_key, filenames_keys[4]) #group the wavelengths and reflectance by lables
+
+
+   
+     
 
 #~~~~~~~~~~~~~~~~~~~~~ junk code ~~~~~~~~~~~~~~~~~~~~~~~
+
+    #print("Trait name: ", trait_keys)  
+    """
+    pca = C_PCA(dataDict)
+    x, keys = pca.extract_features(filenames_keys[4])
+    y, trait_key = pca.extract_class(filenames_keys[2], trait_keys[2])
+    print(x) 
+    print(y)  
+    pca.plot_pca(x,y) """
+    #print(keys, x)   
+
+
+
+    """
+    output_dir = './data/pca/'
+    os.makedirs(output_dir, exist_ok=True)  
+    np.savetxt(f'{output_dir}pca_features.txt', x, delimiter=',', header=','.join(keys), comments='') 
+    print(keys, x) """ 
+    
+
+    """
+    dictManager = C_Dict_manager(dataDict)  
+    dictManager.write_dict_to_file(dataDict, 'data') 
+    """
+
+
+  
+    """
+     
+    #"""   
+
+"""
+class C_PCA:
+    
+    def plot_pca(self, X, y=None, n_components=2):
+        # Standardize the data
+        X_scaled = StandardScaler().fit_transform(X)
+
+        # Run PCA
+        pca = PCA(n_components=n_components)
+        X_pca = pca.fit_transform(X_scaled)
+
+        # Plot the first two principal components
+        plt.figure(figsize=(8, 6))
+        if y is not None:
+            for label in set(y):
+                idx = y == label
+                plt.scatter(X_pca[idx, 0], X_pca[idx, 1], label=f"Class {label}", alpha=0.6)
+            plt.legend()
+        else:
+            plt.scatter(X_pca[:, 0], X_pca[:, 1], alpha=0.6)
+
+        plt.xlabel(f"PC1 ({pca.explained_variance_ratio_[0]*100:.1f}% variance)")
+        plt.ylabel(f"PC2 ({pca.explained_variance_ratio_[1]*100:.1f}% variance)")
+        plt.title("PCA: First Two Principal Components")
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
+"""
