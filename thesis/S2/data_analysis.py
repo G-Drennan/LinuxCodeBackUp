@@ -7,12 +7,14 @@
 
 
 import numpy as np
+import math
 
 import os
 import pandas as pd
 import csv
 
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import seaborn as sns  
 
 from sklearn.covariance import EmpiricalCovariance
@@ -312,7 +314,55 @@ class C_Regression:
                 self.srv_exists = False
                 raise ValueError(f"Unsupported kernel: {kernalType!r}")
 
-    def plot_svr(self, svr):
+    def plot_svr_all_features(self, features_key, class_main_key, features_names):
+        # Prepare for combined plotting
+        n_traits = len(features_names) 
+        ncols = 2
+        nrows = math.ceil(n_traits / ncols)
+        output_dir = './data/figures/svr/' 
+        os.makedirs(output_dir, exist_ok=True)  # Ensure output directory exists
+
+        fig, axes = plt.subplots(nrows, ncols, figsize=(6*ncols, 5*nrows))
+        axes = axes.flatten()
+
+        for i, name in enumerate(features_names):
+            self.make_training_n_test_sets(features_key, class_main_key, name) 
+            svr = self.get_svr("linear")
+            svr.fit(self.x_train, self.y_train)
+            y_pred_test = svr.predict(self.x_test)
+            ax = axes[i]
+
+            # Map conditions to colors
+            unique_conditions = np.unique(self.cond_test)
+            color_map = {cond: cm.tab20(j / len(unique_conditions)) for j, cond in enumerate(unique_conditions)}
+            colors = [color_map[cond] for cond in self.cond_test]
+
+            scatter = ax.scatter(self.y_test, y_pred_test, c=colors, alpha=0.7, edgecolor="k", s=50)
+            min_val = min(np.min(self.y_test), np.min(y_pred_test))
+            max_val = max(np.max(self.y_test), np.max(y_pred_test))
+            ax.plot([min_val, max_val], [min_val, max_val], 'r--', lw=1)
+            r2 = r2_score(self.y_test, y_pred_test)
+            mse = mean_squared_error(self.y_test, y_pred_test)
+            ax.set_title(f"{name}\n$R^2$={r2:.3f}, MSE={mse:.2e}")
+            ax.set_xlabel("Actual")
+            ax.set_ylabel("Predicted")
+
+            # Add legend for conditions
+            handles = [plt.Line2D([0], [0], marker='o', color='w', label=str(cond),
+                                markerfacecolor=color_map[cond], markersize=10)
+                    for cond in unique_conditions]
+            ax.legend(handles=handles, title="Condition", loc='best', fontsize=8)
+
+        # Hide unused axes if any
+        for j in range(i+1, len(axes)):
+            fig.delaxes(axes[j])
+
+        fig.suptitle("SVR Test Set Performance for All Traits", fontsize=16)
+        fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+        fig.savefig(f"{output_dir}svr_all_traits.png")  # Save figure
+        plt.show() 
+
+    def plot_svr_basic(self, svr, lable):
      if self.training_sets_made and self.srv_exists:  
             # Fit on training data
             svr.fit(self.x_train, self.y_train) 
@@ -355,7 +405,7 @@ class C_Regression:
                 # Labels & title
                 ax.set_xlabel("Actual")
                 ax.set_ylabel("Predicted")
-                ax.set_title(f"{split} Set")
+                ax.set_title(f"{split} Set {lable}") 
 
             fig.suptitle("SVR Performance", fontsize=14)
             fig.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -446,10 +496,15 @@ if __name__ == '__main__':
     dictManager = C_Dict_manager(dataDict)  
     
     features_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())
-    reg = C_Regression(dataDict)
-    reg.make_training_n_test_sets(filenames_keys[3], filenames_keys[2], features_names[2])
-    svr = reg.get_svr("linear")
-    reg.plot_svr(svr)  
+    reg = C_Regression(dataDict) 
+    reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2], features_names) 
+
+    #reg.make_training_n_test_sets(filenames_keys[3], filenames_keys[2], features_names[2])
+    #svr = reg.get_svr("linear")
+    #reg.plot_svr(svr)   
+
+    
+# ...existing code...   
     
     """     
     # Prepare data for covariance analysis on trait
