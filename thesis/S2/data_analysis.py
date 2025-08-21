@@ -26,6 +26,9 @@ from collections import Counter
 from sklearn.svm import SVR 
 from sklearn.metrics import r2_score, mean_squared_error
 
+from sklearn.ensemble import RandomForestClassifier 
+from sklearn.model_selection import cross_val_score
+
 class C_Data:
     def __init__(self, filenames,filenames_keys, drop_list = [], wavelenght_min = 450): 
         if len(filenames_keys)-1 != len(filenames):
@@ -287,22 +290,102 @@ class C_analysis:
         plt.close()  # Close the plot to free memory 
         print(f"Covariance matrix saved to {self.output_dir_covariance}covariance_matrix_{filenames_key}.png")
 
-class C_Regression:
-    def __init__(self, dataDict):
+
+class C_Test_train_split:
+
+    def __init__(self, dataDict, rand_state=42):
         self.dataDict = dataDict
         self.training_sets_made = False
-        self.srv_exists = False
+        self.x_train = None
+        self.x_test = None
+        self.y_train = None
+        self.y_test = None
+        self.cond_train = None
+        self.cond_test = None 
 
+        self.random_state = rand_state  # For reproducibility 
+
+    def make_training_n_test_sets(self, features_key, class_main_key, class_name, test_size=0.4, conditions_name = 'Conditions', conditions_key = 'Metadata'):
+        
+        x, keys = self.extract_features(features_key)
+        y, trait_key = self.extract_class(class_main_key, class_name)
+        conditions, _ = self.extract_class(conditions_key, conditions_name)  
+        
+        self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test = self.stratified_split(x, y, conditions, test_size)
+        
+        scaler = StandardScaler()
+        self.x_train = scaler.fit_transform(self.x_train)
+        self.x_test = scaler.transform(self.x_test)
+
+        self.condition_distribution()
+
+        #prove that the split is stratified
+        print("Training set size:", len(self.x_train), "Test set size:", len(self.x_test))
+        self.training_sets_made = True  
+
+        return self.x_train, self.x_test, self.y_train, self.y_test, keys, trait_key 
+
+    def stratified_split(self, x, y, conditions, test_size=0.4):
+        sss = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=self.random_state)
+        for train_idx, test_idx in sss.split(x, y=conditions):
+            x_train, x_test = x[train_idx], x[test_idx]
+            y_train, y_test = y[train_idx], y[test_idx]
+            cond_train, cond_test = np.array(conditions)[train_idx], np.array(conditions)[test_idx]
+            return x_train, x_test, y_train, y_test, cond_train, cond_test
+       
+    def condition_distribution(self):
+        if self.training_sets_made:
+            print("Unique conditions in test set:", np.unique(self.cond_train))
+            
+            train_counts = Counter(self.cond_train)
+            test_counts = Counter(self.cond_test)
+            all_conditions = sorted(set(self.cond_train) | set(self.cond_test))
+
+            print("\nCondition distribution (% in test set):")
+            for cond in all_conditions:
+                train_n = train_counts.get(cond, 0)
+                test_n = test_counts.get(cond, 0)
+                total = train_n + test_n
+                pct_test = 100 * test_n / total if total > 0 else 0
+                print(f"  {cond}: {test_n}/{total} ({pct_test:.1f}%) in test") 
+
+    def extract_features(self, main_key): 
+        sample_entry = next(iter(self.dataDict.values()))[main_key]
+    
+        # Check if keys are numeric 
+        try:
+            num_keys = sorted([int(k) for k in sample_entry.keys()])
+            keys = [str(k) for k in num_keys]
+            x = [[entry[main_key][str(k)] for k in keys] for entry in self.dataDict.values()]
+        except ValueError:
+            keys = list(sample_entry.keys())
+            x = [[entry[main_key][k] for k in keys] for entry in self.dataDict.values()]
+        
+        #self.x = np.array(x) 
+        return np.array(x), keys
+
+    def extract_class(self, main_key, trait_name):
+        y = []
+        for entry in self.dataDict.values(): 
+            y.append(entry[main_key][trait_name])
+        #self.y = np.array(y) 
+        return np.array(y), trait_name
+
+class C_svr:
+    def __init__(self, x_train, x_test, y_train, y_test):
+        self.x_train = x_train
+        self.x_test = x_test
+        self.y_train = y_train
+        self.y_test = y_test
 
     def get_svr(self, kernalType = "poly"):
-        if self.training_sets_made:
-            self.srv_exists = True
-            if kernalType == "rbf":
-                return SVR(kernel=kernalType, C=100, gamma=0.1, epsilon=0.1)
-            elif kernalType == "linear":
-                return SVR(kernel=kernalType, C=100, gamma="auto")
-            elif kernalType == "poly":
-                return SVR(
+        self.srv_exists = True
+        if kernalType == "rbf":
+            return SVR(kernel=kernalType, C=100, gamma=0.1, epsilon=0.1)
+        elif kernalType == "linear":
+            return SVR(kernel=kernalType, C=100, gamma="auto")
+        elif kernalType == "poly":
+            return SVR(
                     kernel=kernalType, 
                     C=100,
                     gamma="auto",
@@ -310,9 +393,9 @@ class C_Regression:
                     epsilon=0.1,
                     coef0=1
                 )
-            else: 
-                self.srv_exists = False
-                raise ValueError(f"Unsupported kernel: {kernalType!r}")
+        else: 
+            self.srv_exists = False
+            raise ValueError(f"Unsupported kernel: {kernalType!r}")
 
     def plot_svr_all_features(self, features_key, class_main_key, features_names):
         # Prepare for combined plotting
@@ -362,119 +445,34 @@ class C_Regression:
         fig.savefig(f"{output_dir}svr_all_traits.png")  # Save figure
         plt.show() 
 
-    def plot_svr_basic(self, svr, lable):
-     if self.training_sets_made and self.srv_exists:  
-            # Fit on training data
-            svr.fit(self.x_train, self.y_train) 
+class C_Dession_trees:
+    def __init__(self, x_train, x_test, y_train, y_test):
+        self.x_train = x_train
+        self.x_test = x_test
+        self.y_train = y_train
+        self.y_test = y_test
 
-            # Generate predictions
-            y_pred_train = svr.predict(self.x_train)
-            y_pred_test  = svr.predict(self.x_test)
+        self.clf = None
 
-            # Prepare figure
-            fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharex=False, sharey=False)
-
-            # Loop over train/test splits
-            for ax, y_true, y_pred, split in zip(
-                axes,
-                (self.y_train,    self.y_test),
-                (y_pred_train, y_pred_test),
-                ("Train",    "Test")
-            ):
-                # Scatter actual vs. predicted
-                ax.scatter(y_true, y_pred, alpha=0.7, edgecolor="k", s=50)
-                
-                # Plot 1:1 line
-                min_val = min(np.min(y_true), np.min(y_pred))
-                max_val = max(np.max(y_true), np.max(y_pred))
-                ax.plot([min_val, max_val], [min_val, max_val], 'r--', lw=1)
-
-                # Compute metrics
-                r2  = r2_score(y_true, y_pred)
-                mse = mean_squared_error(y_true, y_pred)
-
-                # Annotate
-                ax.text(
-                    0.05, 0.95,
-                    f"$R^2$ = {r2:.3f}\nMSE = {mse:.3e}",
-                    transform=ax.transAxes,
-                    va="top",
-                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8)
-                )
-
-                # Labels & title
-                ax.set_xlabel("Actual")
-                ax.set_ylabel("Predicted")
-                ax.set_title(f"{split} Set {lable}") 
-
-            fig.suptitle("SVR Performance", fontsize=14)
-            fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-            plt.show()
-
-
-    def make_training_n_test_sets(self, features_key, class_main_key, class_name, test_size=0.4, conditions_name = 'Conditions', conditions_key = 'Metadata'):
-        
-        x, keys = self.extract_features(features_key)
-        y, trait_key = self.extract_class(class_main_key, class_name)
-        conditions, _ = self.extract_class(conditions_key, conditions_name)  
-        
-        self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test = self.stratified_split(x, y, conditions, test_size)
-        self.condition_distribution()
-
-        #prove that the split is stratified
-        print("Training set size:", len(self.x_train), "Test set size:", len(self.x_test))
-        self.training_sets_made = True  
-
-        return self.x_train, self.x_test, self.y_train, self.y_test, keys, trait_key 
-
-    def stratified_split(self, x, y, conditions, test_size=0.4):
-        sss = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=42)
-        for train_idx, test_idx in sss.split(x, y=conditions):
-            x_train, x_test = x[train_idx], x[test_idx]
-            y_train, y_test = y[train_idx], y[test_idx]
-            cond_train, cond_test = np.array(conditions)[train_idx], np.array(conditions)[test_idx]
-            return x_train, x_test, y_train, y_test, cond_train, cond_test
-       
-    def condition_distribution(self):
-        if self.training_sets_made:
-            print("Unique conditions in test set:", np.unique(self.cond_train))
-            
-            train_counts = Counter(self.cond_train)
-            test_counts = Counter(self.cond_test)
-            all_conditions = sorted(set(self.cond_train) | set(self.cond_test))
-
-            print("\nCondition distribution (% in test set):")
-            for cond in all_conditions:
-                train_n = train_counts.get(cond, 0)
-                test_n = test_counts.get(cond, 0)
-                total = train_n + test_n
-                pct_test = 100 * test_n / total if total > 0 else 0
-                print(f"  {cond}: {test_n}/{total} ({pct_test:.1f}%) in test") 
-
-    def extract_features(self, main_key): 
-        sample_entry = next(iter(self.dataDict.values()))[main_key]
+    def random_forest(self, n_est = 100):  
+         #n_est =  number of trees in the forest.
+        self.clf =  RandomForestClassifier(n_estimators = n_est)
+        self.clf.fit(self.x_train, self.y_train) 
+        y_pred = self.clf.predict(self.x_test)
+        accuracy = np.mean(y_pred == self.y_test)
+        score = self.clf.score(self.x_test, self.y_test) 
+        #F value F1 = 2 * (precision * recall) / (precision + recall
+        print(f"Random Forest Accuracy: {accuracy:.2f}")
+        print(f"Random Forest Score: {score:.2f}") 
+        return self.clf, accuracy
     
-        # Check if keys are numeric 
-        try:
-            num_keys = sorted([int(k) for k in sample_entry.keys()])
-            keys = [str(k) for k in num_keys]
-            x = [[entry[main_key][str(k)] for k in keys] for entry in self.dataDict.values()]
-        except ValueError:
-            keys = list(sample_entry.keys())
-            x = [[entry[main_key][k] for k in keys] for entry in self.dataDict.values()]
-        
-        #self.x = np.array(x) 
-        return np.array(x), keys
+    def cross_val(self, n_splits=10):
+        scores = cross_val_score(self.clf, self.x_train, self.y_train, cv=n_splits)
+        print(f"Cross-validation scores: {scores}")
+        print(f"Mean cross-validation score: {np.mean(scores):.2f}")
+        return scores 
 
-    def extract_class(self, main_key, trait_name):
-        y = []
-        for entry in self.dataDict.values(): 
-            y.append(entry[main_key][trait_name])
-        #self.y = np.array(y) 
-        return np.array(y), trait_name
-    
-
-if __name__ == '__main__':  
+if __name__ == '__main__':    
     print("GO...")
     filenames = [
         'data/maize_2018_2019_unl_metadata.csv',
@@ -494,16 +492,12 @@ if __name__ == '__main__':
     data = C_Data(filenames, filenames_keys)  
     df, dataDict = data.load_data()
     dictManager = C_Dict_manager(dataDict)  
-    
+    """
     features_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())
     reg = C_Regression(dataDict) 
     reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2], features_names) 
+    """
 
-    #reg.make_training_n_test_sets(filenames_keys[3], filenames_keys[2], features_names[2])
-    #svr = reg.get_svr("linear")
-    #reg.plot_svr(svr)   
-
-    
 # ...existing code...   
     
     """     
@@ -552,6 +546,56 @@ if __name__ == '__main__':
 
   
     """
+    
+    def plot_svr_basic(self, svr, lable):
+        # Fit on training data
+        svr.fit(self.x_train, self.y_train) 
+
+        # Generate predictions
+        y_pred_train = svr.predict(self.x_train)
+        y_pred_test  = svr.predict(self.x_test)
+
+         # Prepare figure
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharex=False, sharey=False)
+
+        # Loop over train/test splits
+        for ax, y_true, y_pred, split in zip(
+                axes,
+                (self.y_train,    self.y_test),
+                (y_pred_train, y_pred_test),
+                ("Train",    "Test")
+        ):
+                # Scatter actual vs. predicted
+            ax.scatter(y_true, y_pred, alpha=0.7, edgecolor="k", s=50)
+                
+                # Plot 1:1 line
+            min_val = min(np.min(y_true), np.min(y_pred))
+            max_val = max(np.max(y_true), np.max(y_pred))
+            ax.plot([min_val, max_val], [min_val, max_val], 'r--', lw=1)
+
+            # Compute metrics
+            r2  = r2_score(y_true, y_pred)
+            mse = mean_squared_error(y_true, y_pred)
+
+                # Annotate
+            ax.text(
+                    0.05, 0.95,
+                    f"$R^2$ = {r2:.3f}\nMSE = {mse:.3e}",
+                    transform=ax.transAxes,
+                    va="top",
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8)
+            )
+
+            # Labels & title
+            ax.set_xlabel("Actual")
+            ax.set_ylabel("Predicted")
+            ax.set_title(f"{split} Set {lable}") 
+
+        fig.suptitle("SVR Performance", fontsize=14)
+        fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+        plt.show()
+
+
      
     #"""   
 
