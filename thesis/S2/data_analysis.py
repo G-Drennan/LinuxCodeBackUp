@@ -24,9 +24,10 @@ from sklearn.model_selection import StratifiedShuffleSplit
 from collections import Counter
 
 from sklearn.svm import SVR 
-from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.metrics import r2_score, mean_squared_error, confusion_matrix 
 
-from sklearn.ensemble import RandomForestClassifier 
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, AdaBoostRegressor 
+from sklearn.tree import DecisionTreeRegressor 
 from sklearn.model_selection import cross_val_score
 
 class C_Data:
@@ -323,7 +324,7 @@ class C_Test_train_split:
         print("Training set size:", len(self.x_train), "Test set size:", len(self.x_test))
         self.training_sets_made = True  
 
-        return self.x_train, self.x_test, self.y_train, self.y_test, keys, trait_key 
+        return self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key 
 
     def stratified_split(self, x, y, conditions, test_size=0.4):
         sss = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=self.random_state)
@@ -372,13 +373,15 @@ class C_Test_train_split:
         return np.array(y), trait_name
 
 class C_svr:
-    def __init__(self, x_train, x_test, y_train, y_test):
-        self.x_train = x_train
-        self.x_test = x_test
-        self.y_train = y_train
-        self.y_test = y_test
+    def __init__(self, dataDict): #, x_train = None, x_test = None, y_train = None, y_test = None 
+        #self.x_train = x_train
+        #self.x_test = x_test
+        #self.y_train = y_train
+        #self.y_test = y_test
 
-    def get_svr(self, kernalType = "poly"):
+        self.tnt = C_Test_train_split(dataDict)
+
+    def get_svr_kernal(self, kernalType = "poly"):
         self.srv_exists = True
         if kernalType == "rbf":
             return SVR(kernel=kernalType, C=100, gamma=0.1, epsilon=0.1)
@@ -408,10 +411,10 @@ class C_svr:
         fig, axes = plt.subplots(nrows, ncols, figsize=(6*ncols, 5*nrows))
         axes = axes.flatten()
 
-        for i, name in enumerate(features_names):
-            self.make_training_n_test_sets(features_key, class_main_key, name) 
-            svr = self.get_svr("linear")
-            svr.fit(self.x_train, self.y_train)
+        for i, name in enumerate(features_names): 
+            self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key    = self.tnt.make_training_n_test_sets(features_key, class_main_key, name) 
+            svr = self.get_svr_kernal("linear") 
+            svr.fit(self.x_train, self.y_train) 
             y_pred_test = svr.predict(self.x_test)
             ax = axes[i]
 
@@ -425,10 +428,12 @@ class C_svr:
             max_val = max(np.max(self.y_test), np.max(y_pred_test))
             ax.plot([min_val, max_val], [min_val, max_val], 'r--', lw=1)
             r2 = r2_score(self.y_test, y_pred_test)
+            print(f"{name} score: {svr.score(self.x_test, self.y_test)}")
+            #r2_score(self.y_test, y_pred_test) and svr.score(self.x_test, self.y_test) produce smae results 
             mse = mean_squared_error(self.y_test, y_pred_test)
             ax.set_title(f"{name}\n$R^2$={r2:.3f}, MSE={mse:.2e}")
             ax.set_xlabel("Actual")
-            ax.set_ylabel("Predicted")
+            ax.set_ylabel("Predicted") 
 
             # Add legend for conditions
             handles = [plt.Line2D([0], [0], marker='o', color='w', label=str(cond),
@@ -446,17 +451,64 @@ class C_svr:
         plt.show() 
 
 class C_Dession_trees:
-    def __init__(self, x_train, x_test, y_train, y_test):
-        self.x_train = x_train
-        self.x_test = x_test
-        self.y_train = y_train
-        self.y_test = y_test
+    def __init__(self, dataDict):
+        self.tnt = C_Test_train_split(dataDict)
 
         self.clf = None
+        self.model_exists = False
 
-    def random_forest(self, n_est = 100):  
+    def train_models(self, features_key, class_main_key, features_names, model = "RF"):
+        
+        for i, name in enumerate(features_names): 
+            print(f"{name}: Training {model} model") 
+            self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key    = self.tnt.make_training_n_test_sets(features_key, class_main_key, name)
+            if model == "RF":
+                self.random_forest_Regressor()
+            elif model == "AB":
+                self.Ada_Boost_Regressor()
+            elif model == "GB":
+                self.Gradient_Boosting_Regressor()
+            elif model == "DT": 
+                self.desision_tree_regressor()
+            self.cross_val()
+
+    def desision_tree_regressor(self, max_depth=5):
+        
+        self.clf = DecisionTreeRegressor(max_depth=max_depth)
+        self.clf.fit(self.x_train, self.y_train) 
+        y_pred = self.clf.predict(self.x_test)
+        accuracy = np.mean(y_pred == self.y_test)
+        score = self.clf.score(self.x_test, self.y_test) 
+        print(f"Decision Tree Accuracy: {accuracy:.2f}")
+        print(f"Decision Tree Score: {score:.2f}") 
+        self.model_exists = True
+        return self.clf, accuracy
+
+    def Gradient_Boosting_Regressor(self, n_est = 100, Lr = 0.1): 
+        self.clf = GradientBoostingRegressor(n_estimators=n_est, learning_rate = Lr)
+        self.clf.fit(self.x_train, self.y_train) 
+        y_pred = self.clf.predict(self.x_test)
+        accuracy = np.mean(y_pred == self.y_test)
+        score = self.clf.score(self.x_test, self.y_test) 
+        print(f"Gradient Boosting Accuracy: {accuracy:.2f}")
+        print(f"Gradient Boosting Score: {score:.2f}") 
+        self.model_exists = True
+        return self.clf, accuracy
+
+    def Ada_Boost_Regressor(self, n_est = 100, Lr = 1.0):
+        self.clf = AdaBoostRegressor(n_estimators=100, learning_rate=1.0)
+        self.clf.fit(self.x_train, self.y_train) 
+        y_pred = self.clf.predict(self.x_test)
+        accuracy = np.mean(y_pred == self.y_test)
+        score = self.clf.score(self.x_test, self.y_test) 
+        print(f"Ada Boost Accuracy: {accuracy:.2f}")
+        print(f"Ada Boost Score: {score:.2f}") 
+        self.model_exists = True
+        return self.clf, accuracy
+
+    def random_forest_Regressor(self, n_est = 100):   
          #n_est =  number of trees in the forest.
-        self.clf =  RandomForestClassifier(n_estimators = n_est)
+        self.clf =  RandomForestRegressor(n_estimators = n_est)
         self.clf.fit(self.x_train, self.y_train) 
         y_pred = self.clf.predict(self.x_test)
         accuracy = np.mean(y_pred == self.y_test)
@@ -464,13 +516,30 @@ class C_Dession_trees:
         #F value F1 = 2 * (precision * recall) / (precision + recall
         print(f"Random Forest Accuracy: {accuracy:.2f}")
         print(f"Random Forest Score: {score:.2f}") 
+        self.model_exists = True
         return self.clf, accuracy
     
+    #Cross-validation test the models performance. 
     def cross_val(self, n_splits=10):
-        scores = cross_val_score(self.clf, self.x_train, self.y_train, cv=n_splits)
-        print(f"Cross-validation scores: {scores}")
-        print(f"Mean cross-validation score: {np.mean(scores):.2f}")
+        if self.model_exists: 
+            scores = cross_val_score(self.clf, self.x_train, self.y_train, cv=n_splits) #CV no. folds 
+            #returnes scores: ndarray of float of shape=(len(list(cv)),)
+            #Array of scores of the estimator for each run of the cross validation.
+            
+            print(f"Cross-validation scores: {scores}")
+            print(f"Mean cross-validation score: {np.mean(scores):.2f}")
         return scores 
+    
+    def confusion_matrix(self):
+        if self.model_exists:
+            y_pred = self.clf.predict(self.x_test)
+            cm = confusion_matrix(self.y_test, y_pred)
+            print("Confusion Matrix:")
+            print(cm)
+            return cm
+        else:
+            print("Model not trained yet.")
+            return None
 
 if __name__ == '__main__':    
     print("GO...")
@@ -492,11 +561,12 @@ if __name__ == '__main__':
     data = C_Data(filenames, filenames_keys)  
     df, dataDict = data.load_data()
     dictManager = C_Dict_manager(dataDict)  
-    """
+
     features_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())
-    reg = C_Regression(dataDict) 
+
+    reg = C_svr(dataDict)  
     reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2], features_names) 
-    """
+    
 
 # ...existing code...   
     
