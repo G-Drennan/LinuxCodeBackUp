@@ -291,6 +291,7 @@ class C_analysis:
         plt.close()  # Close the plot to free memory 
         print(f"Covariance matrix saved to {self.output_dir_covariance}covariance_matrix_{filenames_key}.png")
 
+#~~~~~~~~~~~~~~~~~~~~~ Regressors ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 
 class C_Test_train_split:
 
@@ -314,7 +315,7 @@ class C_Test_train_split:
         
         self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test = self.stratified_split(x, y, conditions, test_size)
         
-        scaler = StandardScaler()
+        scaler = StandardScaler() 
         self.x_train = scaler.fit_transform(self.x_train)
         self.x_test = scaler.transform(self.x_test)
 
@@ -362,22 +363,17 @@ class C_Test_train_split:
             keys = list(sample_entry.keys())
             x = [[entry[main_key][k] for k in keys] for entry in self.dataDict.values()]
         
-        #self.x = np.array(x) 
         return np.array(x), keys
 
     def extract_class(self, main_key, trait_name):
         y = []
         for entry in self.dataDict.values(): 
             y.append(entry[main_key][trait_name])
-        #self.y = np.array(y) 
+
         return np.array(y), trait_name
 
 class C_svr:
-    def __init__(self, dataDict): #, x_train = None, x_test = None, y_train = None, y_test = None 
-        #self.x_train = x_train
-        #self.x_test = x_test
-        #self.y_train = y_train
-        #self.y_test = y_test
+    def __init__(self, dataDict): 
 
         self.tnt = C_Test_train_split(dataDict)
 
@@ -541,6 +537,16 @@ class C_Dession_trees:
             print("Model not trained yet.")
             return None
 
+class C_PCA: 
+    def __init__(self,df, dataDict): 
+        self.dataDict = dataDict
+        #datadict in form {ID: {Metadata: {}, Traits: {}, Hs_Traits: {}, Spectra: {}}}
+        self.df = df
+    
+    
+
+
+
 if __name__ == '__main__':    
     print("GO...")
     filenames = [
@@ -562,13 +568,20 @@ if __name__ == '__main__':
     df, dataDict = data.load_data()
     dictManager = C_Dict_manager(dataDict)  
 
+    model = C_PCA(dataDict) 
+    model.extract_features(keys=('Traits', 'Hs_Traits', 'Spectra')) 
+    pca_output = model.run_pca(n_components=3)
+    print("Explained variance:", model.explained_variance())
+    model.plot_pca(metadata_key='Conditions') 
+
+
+    """
     features_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())
 
     reg = C_svr(dataDict)  
     reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2], features_names) 
     
-
-# ...existing code...   
+    """
     
     """     
     # Prepare data for covariance analysis on trait
