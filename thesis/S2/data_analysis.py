@@ -2,9 +2,9 @@
 
 #TODO:  PCA 
 
-#TODO: sort into test and training data sets 40% - 60% split. Keep consistance for mulit differnt combinations of x and y data. 
-    #   where Y data is always the given VI found in data/maize_2018_2019_unl_traits.csv
+#TODO: reduce the spectra measurements to be multiles of 5
 
+#TODO: svr with spectra
 
 import numpy as np
 import math
