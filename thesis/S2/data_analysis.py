@@ -1,13 +1,22 @@
 #CSV files: data/maize_2018_2019_unl_metadata.csv, data/maize_2018_2019_unl_spectra.csv, data/maize_2018_2019_unl_traits.csv
 
-#TODO:  PCA 
+
+#TODO: gen alg feature selection https://www.kaggle.com/code/tanmayunhale/genetic-algorithm-for-feature-selection 
+#TODO: perform DT on code and save the outputs
+
 
 #TODO: reduce the spectra measurements to be multiles of 5
-
 #TODO: svr with spectra
 
+#TODO: expand on HS_traits. 
+
+#TODO: more plots, better titles, ensure they are saved every time.
+#TODO:  PCA  
+
+  
+
 import numpy as np
-import math
+import math 
 
 import os
 import pandas as pd
@@ -53,7 +62,7 @@ class C_Data:
  
             else:
                 print(f"Unsupported file format: {filename}")
-        print("ALL files combined into: ", self.path)
+        print("ALL files combined into: ", self.path) 
         return self.combined_df, self.fill_dict()
         
     def combine_csvs(self, filename):
@@ -63,7 +72,7 @@ class C_Data:
             self.firstCsv = False
             self.combined_df = new_df
         else: 
-            #ignore the first colum
+            #ignore the first colum this is the same col for all sheets, the ID col.  
             new_df = new_df.iloc[:, 1:]
             self.combined_df = pd.concat([self.combined_df, new_df], axis=1)
         
