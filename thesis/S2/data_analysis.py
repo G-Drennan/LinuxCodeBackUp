@@ -40,7 +40,7 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.model_selection import cross_val_score
 
 class C_Data:
-    def __init__(self, filenames,filenames_keys, drop_list = [], wavelenght_min = 450): 
+    def __init__(self, filenames,filenames_keys, drop_list = [], wavelenght_min = 450, reduce_wavelenghts = False): 
         if len(filenames_keys)-1 != len(filenames):
             print("WARN: key not same lenght as file names")
             
@@ -53,6 +53,7 @@ class C_Data:
         self.wavelenght_min = wavelenght_min 
         self.filenames_keys = filenames_keys
         self.drop_list = drop_list  
+        self.reduce_wavelenghts = reduce_wavelenghts
 
     def load_data(self): 
         for filename in self.filenames: 
@@ -82,9 +83,9 @@ class C_Data:
     def remove_cols(self):
         for header in self.drop_list:
             self.combined_df.drop(columns=[header]) 
-        self.remove_wavelengths()  
+        self.remove_wavelengths(self.reduce_wavelenghts)  
 
-    def remove_wavelengths(self):
+    def remove_wavelengths(self, reduce_wavelenghts = False):
         headers = self.combined_df.columns.tolist()
         headers_excluding_wavelenght = [header for header in headers if not header.isnumeric()]
         headers_wavelenght = [header for header in headers if header.isnumeric()]
@@ -93,6 +94,12 @@ class C_Data:
             if int(wavelenght) < self.wavelenght_min:    
                 #remove the row from the data frame
                 self.combined_df = self.combined_df.drop(columns=[wavelenght])
+        if reduce_wavelenghts:
+            #remove wavelengths that are not a multieple of 5
+            for wavelenght in headers_wavelenght:
+                if int(wavelenght) % 5 != 0:    
+                    #remove the row from the data frame
+                    self.combined_df = self.combined_df.drop(columns=[wavelenght])  
     
     #remove year, genotype, all wavelenghts, ect  
 
@@ -405,9 +412,11 @@ class C_svr:
             self.srv_exists = False
             raise ValueError(f"Unsupported kernel: {kernalType!r}")
 
-    def plot_svr_all_features(self, features_key, class_main_key, features_names):
-        # Prepare for combined plotting
-        n_traits = len(features_names) 
+    def plot_svr_all_features(self, features_key, class_main_key):
+
+        class_names = list(next(iter(dataDict.values()))[class_main_key].keys())
+        # Prepare for combined plotting 
+        n_traits = len(class_names) 
         ncols = 2
         nrows = math.ceil(n_traits / ncols)
         output_dir = './data/figures/svr/' 
@@ -416,7 +425,7 @@ class C_svr:
         fig, axes = plt.subplots(nrows, ncols, figsize=(6*ncols, 5*nrows))
         axes = axes.flatten()
 
-        for i, name in enumerate(features_names): 
+        for i, name in enumerate(class_names):  
             self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key    = self.tnt.make_training_n_test_sets(features_key, class_main_key, name) 
             svr = self.get_svr_kernal("linear") 
             svr.fit(self.x_train, self.y_train) 
@@ -458,24 +467,32 @@ class C_svr:
 class C_Dession_trees:
     def __init__(self, dataDict):
         self.tnt = C_Test_train_split(dataDict)
-
+        self.models = ["RF", "AB", "GB", "DT"]
+        self.models_full = ["Random Forest", "Ada Boost", "Gradient Boosting", "Decision Tree"] 
         self.clf = None
         self.model_exists = False
 
-    def train_models(self, features_key, class_main_key, features_names, model = "RF"):
-        
-        for i, name in enumerate(features_names): 
-            print(f"{name}: Training {model} model") 
-            self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key    = self.tnt.make_training_n_test_sets(features_key, class_main_key, name)
-            if model == "RF":
-                self.random_forest_Regressor()
-            elif model == "AB":
-                self.Ada_Boost_Regressor()
-            elif model == "GB":
-                self.Gradient_Boosting_Regressor()
-            elif model == "DT": 
-                self.desision_tree_regressor()
-            self.cross_val()
+    def feature_selection_genetic_alg(self, features_key, class_main_key):
+        class_names = list(next(iter(dataDict.values()))[class_main_key].keys())
+
+        for i, name in enumerate(class_names): #for each class name
+            for i, model in enumerate(self.models):
+                #genetic feature selection, save best features from first run use for other runs for consistencey and comparision. 
+                self.train_models(features_key, class_main_key, name, model) 
+
+    def train_models(self, features_key, class_main_key, class_name, model = "RF"): # features_name,
+  
+        print(f"{class_name}: Training {model} model") 
+        self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key    = self.tnt.make_training_n_test_sets(features_key, class_main_key, class_name)
+        if model == "RF": 
+            self.random_forest_Regressor()
+        elif model == "AB":
+            self.Ada_Boost_Regressor()
+        elif model == "GB":
+            self.Gradient_Boosting_Regressor()
+        elif model == "DT": 
+            self.desision_tree_regressor()
+        self.cross_val()
 
     def desision_tree_regressor(self, max_depth=5):
         
@@ -573,24 +590,16 @@ if __name__ == '__main__':
         'Spectra'
     ]
      
-    data = C_Data(filenames, filenames_keys)  
+    data = C_Data(filenames, filenames_keys, reduce_wavelenghts = True)  
     df, dataDict = data.load_data()
-    dictManager = C_Dict_manager(dataDict)  
-
-    model = C_PCA(dataDict) 
-    model.extract_features(keys=('Traits', 'Hs_Traits', 'Spectra')) 
-    pca_output = model.run_pca(n_components=3)
-    print("Explained variance:", model.explained_variance())
-    model.plot_pca(metadata_key='Conditions') 
+    dictManager = C_Dict_manager(dataDict)   
 
 
-    """
-    features_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())
 
     reg = C_svr(dataDict)  
-    reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2], features_names) 
+    reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2])  
     
-    """
+    
     
     """     
     # Prepare data for covariance analysis on trait
@@ -610,6 +619,14 @@ if __name__ == '__main__':
      
 
 #~~~~~~~~~~~~~~~~~~~~~ junk code ~~~~~~~~~~~~~~~~~~~~~~~
+
+    """
+    model = C_PCA(dataDict) 
+    model.extract_features(keys=('Traits', 'Hs_Traits', 'Spectra')) 
+    pca_output = model.run_pca(n_components=3)
+    print("Explained variance:", model.explained_variance())
+    model.plot_pca(metadata_key='Conditions') 
+    """  
 
     #print("Trait name: ", trait_keys)  
     """
