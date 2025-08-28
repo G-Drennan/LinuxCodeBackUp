@@ -32,12 +32,14 @@ from sklearn.decomposition import PCA
 from sklearn.model_selection import StratifiedShuffleSplit
 from collections import Counter
 
-from sklearn.svm import SVR 
-from sklearn.metrics import r2_score, mean_squared_error, confusion_matrix 
+from sklearn.svm import SVR  
+from sklearn.metrics import accuracy_score, r2_score, mean_squared_error, confusion_matrix 
 
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, AdaBoostRegressor 
 from sklearn.tree import DecisionTreeRegressor 
 from sklearn.model_selection import cross_val_score
+from random import randint
+ 
 
 class C_Data:
     def __init__(self, filenames,filenames_keys, drop_list = [], wavelenght_min = 450, reduce_wavelenghts = False): 
@@ -465,25 +467,23 @@ class C_svr:
         plt.show() 
 
 class C_Dession_trees:
-    def __init__(self, dataDict):
-        self.tnt = C_Test_train_split(dataDict)
+    def __init__(self, dataDict, x_train, x_test, y_train, y_test):
+        
+        self.x_train = x_train
+        self.x_test = x_test
+        self.y_train = y_train
+        self.y_test = y_test 
+        
+
         self.models = ["RF", "AB", "GB", "DT"]
         self.models_full = ["Random Forest", "Ada Boost", "Gradient Boosting", "Decision Tree"] 
-        self.clf = None
-        self.model_exists = False
+        self.models_dict = {"RF":"Random Forest", "AB":"Ada Boost", "GB":"Gradient Boosting", "DT":"Decision Tree"}
+        self.model = None #model 
+        self.model_exists = False 
 
-    def feature_selection_genetic_alg(self, features_key, class_main_key):
-        class_names = list(next(iter(dataDict.values()))[class_main_key].keys())
-
-        for i, name in enumerate(class_names): #for each class name
-            for i, model in enumerate(self.models):
-                #genetic feature selection, save best features from first run use for other runs for consistencey and comparision. 
-                self.train_models(features_key, class_main_key, name, model) 
-
-    def train_models(self, features_key, class_main_key, class_name, model = "RF"): # features_name,
+    def train_model(self, features_key, class_main_key, class_name, model = "RF"): # features_name,
   
-        print(f"{class_name}: Training {model} model") 
-        self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key    = self.tnt.make_training_n_test_sets(features_key, class_main_key, class_name)
+        print(f"{class_name}: Training {model} model")  
         if model == "RF": 
             self.random_forest_Regressor()
         elif model == "AB":
@@ -491,70 +491,85 @@ class C_Dession_trees:
         elif model == "GB":
             self.Gradient_Boosting_Regressor()
         elif model == "DT": 
-            self.desision_tree_regressor()
-        self.cross_val()
+            self.desision_tree_regressor() 
+        
+        
+        self.accuracy = accuracy_score(self.y_test, self.y_pred)  
+        print(f"{self.models_dict[model]} Accuracy: {self.accuracy:.2f}")
+        
+        scores, cross_val_mean = self.cross_val() 
+
+        print(f"Cross-validation scores of {self.models_dict[model]}: {scores}")
+        print(f"Mean cross-validation score: {cross_val_mean:.2f}") 
+
+        return self.model, self.accuracy, cross_val_mean 
 
     def desision_tree_regressor(self, max_depth=5):
         
-        self.clf = DecisionTreeRegressor(max_depth=max_depth)
-        self.clf.fit(self.x_train, self.y_train) 
-        y_pred = self.clf.predict(self.x_test)
-        accuracy = np.mean(y_pred == self.y_test)
-        score = self.clf.score(self.x_test, self.y_test) 
-        print(f"Decision Tree Accuracy: {accuracy:.2f}")
-        print(f"Decision Tree Score: {score:.2f}") 
+        self.model = DecisionTreeRegressor(max_depth=max_depth)
+        self.model.fit(self.x_train, self.y_train) 
+        self.y_pred = self.model.predict(self.x_test)
+        
         self.model_exists = True
-        return self.clf, accuracy
+        return self.model#, self.accuracy
 
     def Gradient_Boosting_Regressor(self, n_est = 100, Lr = 0.1): 
-        self.clf = GradientBoostingRegressor(n_estimators=n_est, learning_rate = Lr)
-        self.clf.fit(self.x_train, self.y_train) 
-        y_pred = self.clf.predict(self.x_test)
-        accuracy = np.mean(y_pred == self.y_test)
-        score = self.clf.score(self.x_test, self.y_test) 
-        print(f"Gradient Boosting Accuracy: {accuracy:.2f}")
-        print(f"Gradient Boosting Score: {score:.2f}") 
+        self.model = GradientBoostingRegressor(n_estimators=n_est, learning_rate = Lr)
+        self.model.fit(self.x_train, self.y_train) 
+        self.y_pred = self.model.predict(self.x_test)
+
         self.model_exists = True
-        return self.clf, accuracy
+        return self.model#, self.accuracy
 
     def Ada_Boost_Regressor(self, n_est = 100, Lr = 1.0):
-        self.clf = AdaBoostRegressor(n_estimators=100, learning_rate=1.0)
-        self.clf.fit(self.x_train, self.y_train) 
-        y_pred = self.clf.predict(self.x_test)
-        accuracy = np.mean(y_pred == self.y_test)
-        score = self.clf.score(self.x_test, self.y_test) 
-        print(f"Ada Boost Accuracy: {accuracy:.2f}")
-        print(f"Ada Boost Score: {score:.2f}") 
+        self.model = AdaBoostRegressor(n_estimators=100, learning_rate=1.0)
+        self.model.fit(self.x_train, self.y_train) 
+        self.y_pred = self.model.predict(self.x_test)
+
         self.model_exists = True
-        return self.clf, accuracy
+        return self.model#, self.accuracy
 
     def random_forest_Regressor(self, n_est = 100):   
          #n_est =  number of trees in the forest.
-        self.clf =  RandomForestRegressor(n_estimators = n_est)
-        self.clf.fit(self.x_train, self.y_train) 
-        y_pred = self.clf.predict(self.x_test)
-        accuracy = np.mean(y_pred == self.y_test)
-        score = self.clf.score(self.x_test, self.y_test) 
-        #F value F1 = 2 * (precision * recall) / (precision + recall
-        print(f"Random Forest Accuracy: {accuracy:.2f}")
-        print(f"Random Forest Score: {score:.2f}") 
+        self.model =  RandomForestRegressor(n_estimators = n_est)
+        self.model.fit(self.x_train, self.y_train) 
+        self.y_pred = self.model.predict(self.x_test)
+
         self.model_exists = True
-        return self.clf, accuracy
+        return self.model#, self.accuracy
+    
+    def my_accuracy_score(self, y_pred): 
+        accuracy = np.mean(y_pred == self.y_test)
+        score = self.model.score(self.x_test, self.y_test) 
+        #F value F1 = 2 * (precision * recall) / (precision + recall
+        return accuracy, score, y_pred
     
     #Cross-validation test the models performance. 
-    def cross_val(self, n_splits=10):
-        if self.model_exists: 
-            scores = cross_val_score(self.clf, self.x_train, self.y_train, cv=n_splits) #CV no. folds 
+    def cross_val(self, model = None, n_splits=10, model = "RF"):
+        if self.model_exists and model == None: 
+            scores = cross_val_score(self.model, self.x_train, self.y_train, cv=n_splits) #CV no. folds 
             #returnes scores: ndarray of float of shape=(len(list(cv)),)
             #Array of scores of the estimator for each run of the cross validation.
-            
-            print(f"Cross-validation scores: {scores}")
-            print(f"Mean cross-validation score: {np.mean(scores):.2f}")
-        return scores 
+            cross_val_mean = scores.mean()
+        elif model!= None:
+            scores = cross_val_score(model, self.x_train, self.y_train, cv=n_splits) 
+            cross_val_mean = scores.mean() 
+
+        else:
+            print("Model not trained yet.")
+            return None 
+
+        return scores, cross_val_mean 
     
-    def confusion_matrix(self):
-        if self.model_exists:
-            y_pred = self.clf.predict(self.x_test)
+    def confusion_matrix(self, model = None):
+        if self.model_exists and model == None:
+            y_pred = self.model.predict(self.x_test)
+            cm = confusion_matrix(self.y_test, y_pred)
+            print("Confusion Matrix:") 
+            print(cm)
+            return cm
+        elif model!= None:
+            y_pred = model.predict(self.x_test) 
             cm = confusion_matrix(self.y_test, y_pred)
             print("Confusion Matrix:")
             print(cm)
@@ -562,6 +577,130 @@ class C_Dession_trees:
         else:
             print("Model not trained yet.")
             return None
+
+class C_gen_alg:
+    def __init__(self, dataDict): 
+        self.model = None
+        self.model_exists = False 
+        self.dataDict = dataDict 
+        self.tnt = C_Test_train_split(dataDict)
+
+        #class_names = list(next(iter(dataDict.values()))[class_main_key].keys())
+        #for i, name in enumerate(class_names): #for each class name
+
+    
+    def gen_alg_on_best_model(self, features_key, class_main_key, class_name):
+        #chromo_df_bc,score_bc=generations(data_bc,label_bc)
+        self.find_best_model(features_key, class_main_key, class_name)
+
+        n_feat = self.x_train.shape[1]  
+        best_chromo_x, best_score = self.generations(n_feat=n_feat)
+        self.best_chromo_x_overall = max(zip(best_score, best_chromo_x), key=lambda x: x[0])[1]
+ 
+        print("Best feature subset found:", np.where(self.best_chromo_x_overall)[0])
+        print("Corresponding accuracy:", best_score[0])
+
+    def find_best_model(self, features_key, class_main_key, name): 
+        max_cross_val_mean = 0
+
+        self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key  = self.tnt.make_training_n_test_sets(features_key, class_main_key, name) 
+        model_obj = C_Dession_trees(dataDict, self.x_train, self.x_test, self.y_train, self.y_test) 
+        for i, model in enumerate(model_obj.models_full):
+            #genetic feature selection, save best features from first run use for other runs for consistencey and comparision. 
+            model, accuracy, cross_val_mean  = model_obj.train_model(features_key, class_main_key, name, model) 
+            if cross_val_mean > max_cross_val_mean :
+                max_cross_val_mean = cross_val_mean
+                self.model = model
+                self.model_exists = True  
+                best_model_index = i 
+    
+        print(f"{model_obj.models_full[best_model_index]} highest accuracy of {max_cross_val_mean}.") 
+        
+    #data_bc = pd.read_csv("../input/data.csv")
+    #n_feat=data_bc.shape[1] 
+    #features are the x.test and x.train, the predicted are teh y_test, y_train
+        
+    def generations(self,n_feat,size=80,n_parents=64,mutation_rate=0.20,n_gen=5):
+        best_chromo_x= []
+        best_score= [] 
+        population_nextgen= self.initilization_of_population(size,n_feat)
+        for i in range(n_gen):
+            scores, pop_after_fit = self.fitness_score(population_nextgen)
+            print('Best score in generation',i+1,':',scores[:1])  #2
+            pop_after_sel = self.selection(pop_after_fit,n_parents)
+            pop_after_cross = self.crossover(pop_after_sel)
+            population_nextgen = self.mutation(pop_after_cross,mutation_rate,n_feat)
+            best_chromo_x.append(pop_after_fit[0])
+            best_score.append(scores[0])
+        return best_chromo_x, best_score
+
+    def initilization_of_population(self, size,n_feat):
+        population = []
+        for i in range(size):
+            chromosome = np.ones(n_feat,dtype=np.bool)     
+            chromosome[:int(0.3*n_feat)]=False             
+            np.random.shuffle(chromosome)
+            population.append(chromosome)
+        return population
+
+
+    def fitness_score(self, population, use_cross_val = False):
+        scores = []
+        for chromosome in population:  
+            #model is the curretn model.   
+            #model = RandomForestClassifier(n_estimators=200, random_state=0)
+            selected_features = np.where(chromosome)[0]
+            self.model.fit(self.x_train[:, selected_features], self.y_train)
+            scores.append(self.retrive_score(chromosome))  
+        scores, population = np.array(scores), np.array(population) 
+        inds = np.argsort(scores)                                     
+        return list(scores[inds][::-1]), list(population[inds,:][::-1]) 
+    
+    def retrive_score(self, chromosome, use_cross_val = False, ):
+        if use_cross_val:
+            cv_scores = cross_val_score(self.model, self.x_train[:, chromosome], self.y_train, cv=10, scoring='accuracy')
+            return cv_scores.mean()  
+        else:
+            predictions = self.model.fit(self.x_train[:, chromosome], self.y_train).predict(self.x_test[:, chromosome])
+            return accuracy_score(self.y_test, predictions) 
+
+    def selection(self, pop_after_fit,n_parents):
+        population_nextgen = []
+        for i in range(n_parents):
+            population_nextgen.append(pop_after_fit[i])
+        return population_nextgen
+
+
+    def crossover(self, pop_after_sel):
+        pop_nextgen = pop_after_sel
+        for i in range(0,len(pop_after_sel),2):
+            new_par = []
+            child_1 , child_2 = pop_nextgen[i] , pop_nextgen[i+1]
+            new_par = np.concatenate((child_1[:len(child_1)//2],child_2[len(child_1)//2:]))
+            pop_nextgen.append(new_par)
+        return pop_nextgen
+
+
+    def mutation(self, pop_after_cross,mutation_rate,n_feat):   
+        mutation_range = int(mutation_rate*n_feat)
+        pop_next_gen = []
+        for n in range(0,len(pop_after_cross)):
+            chromo = pop_after_cross[n]
+            rand_posi = [] 
+            for i in range(0,mutation_range):
+                pos = randint(0,n_feat-1)
+                rand_posi.append(pos)
+            for j in rand_posi:
+                chromo[j] = not chromo[j]  
+            pop_next_gen.append(chromo)
+        return pop_next_gen
+        
+    def plot(score,x,y,c = "b"): #plot the generation accuracies. 
+        gen = [1,2,3,4,5]
+        plt.figure(figsize=(6,4))
+        ax = sns.pointplot(x=gen, y=score,color = c )
+        ax.set(xlabel="Generation", ylabel="Accuracy")
+        ax.set(ylim=(x,y)) 
 
 class C_PCA: 
     def __init__(self,df, dataDict): 
@@ -619,6 +758,8 @@ if __name__ == '__main__':
      
 
 #~~~~~~~~~~~~~~~~~~~~~ junk code ~~~~~~~~~~~~~~~~~~~~~~~
+
+ 
 
     """
     model = C_PCA(dataDict) 
