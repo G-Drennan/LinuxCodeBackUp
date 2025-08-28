@@ -545,7 +545,7 @@ class C_Dession_trees:
         return accuracy, score, y_pred
     
     #Cross-validation test the models performance. 
-    def cross_val(self, model = None, n_splits=10, model = "RF"):
+    def cross_val(self, model = None, n_splits=10):
         if self.model_exists and model == None: 
             scores = cross_val_score(self.model, self.x_train, self.y_train, cv=n_splits) #CV no. folds 
             #returnes scores: ndarray of float of shape=(len(list(cv)),)
