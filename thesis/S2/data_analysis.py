@@ -1,17 +1,18 @@
 #CSV files: data/maize_2018_2019_unl_metadata.csv, data/maize_2018_2019_unl_spectra.csv, data/maize_2018_2019_unl_traits.csv
 
 
-#TODO: gen alg feature selection https://www.kaggle.com/code/tanmayunhale/genetic-algorithm-for-feature-selection 
+#: gen alg feature selection https://www.kaggle.com/code/tanmayunhale/genetic-algorithm-for-feature-selection 
 #TODO: perform DT on code and save the outputs
 
 
-#TODO: reduce the spectra measurements to be multiles of 5
-#TODO: svr with spectra
+#: reduce the spectra measurements to be multiles of 5
+#TODO: svr with spectra ~ 
 
-#TODO: expand on HS_traits. 
+#TODO: expand on HS_traits. ~
 
-#TODO: more plots, better titles, ensure they are saved every time.
-#TODO:  PCA  
+#TODO: more plots, better titles, ensure they are saved every time. ~
+
+#TODO:  PCA   
 
   
 
