@@ -29,6 +29,8 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import seaborn as sns  
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter 
+from collections import defaultdict  
 
 from sklearn.covariance import EmpiricalCovariance
 from sklearn.preprocessing import StandardScaler 
@@ -177,8 +179,8 @@ class C_Dict_manager:
                 sortedDict[value] = {}
             sortedDict[value][id] = entry
         #write to txt file (sorted_dict) 
-        
-        self.write_dict_to_file(self.inital_dict, value_key) 
+        lable = f"sorted_by_{value_key}"
+        self.write_dict_to_file(self.inital_dict, lable)  
 
         return sortedDict 
 
@@ -187,7 +189,7 @@ class C_Dict_manager:
 
         os.makedirs(outputDir, exist_ok=True)  # Ensure the output directory exists
         
-        with open(f'{outputDir}sorted_dict_by_{lable}.txt', 'w') as f:
+        with open(f'{outputDir}dict_{lable}.txt', 'w') as f:
             f.write(str(dict)) 
 
 #~~~~~~~~~~~~~~~~~~~~~~~ plotting ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -198,6 +200,9 @@ class C_Plot_Wavelenght_reflectance:
         self.reflectance_arr = []
         self.reflectance_arr_std = []
         self.lables = [] 
+        
+        self.reflectance_min = []
+        self.reflectance_max = [] 
         self.dataDictSort = inital_dict
     
     def plot_dict_wavelenghts(self, sort_key, dict_key):
@@ -208,22 +213,24 @@ class C_Plot_Wavelenght_reflectance:
             count = {} 
             self.lables.append(key) 
 
+            #data in form of  'Spectra': {'450': 0.055956043, '451': 0.056224021, '452': 0.056229805, '453': 0.056243247, '454': 0.056340493, '455': 0.056314658, '456': 0.056342624, ect
+            wavelength_accumulator = defaultdict(list) 
             for entry in entries.values(): 
                 for wl_str, refl in entry[dict_key].items():
                     wl = int(wl_str)
-                    wavelength_accumulator[wl] = wavelength_accumulator.get(wl, 0) + refl
-                    count[wl] = count.get(wl, 0) + 1
-
-            # Compute mean and std deviation per wavelength
-            wavelengths = sorted(wavelength_accumulator.keys())
+                    wavelength_accumulator[wl].append(refl)
+            wavelengths = wavelength_accumulator.keys() 
             reflectance = [np.mean(wavelength_accumulator[wl]) for wl in wavelengths]
             reflectance_std = [np.std(wavelength_accumulator[wl]) for wl in wavelengths]
             reflectance_min = [np.min(wavelength_accumulator[wl]) for wl in wavelengths]
             reflectance_max = [np.max(wavelength_accumulator[wl]) for wl in wavelengths]
 
-            self.wavelengths_arr.append(wavelengths) 
+            self.wavelengths_arr.append(wavelengths)  
             self.reflectance_arr.append(reflectance)
             self.reflectance_arr_std.append(reflectance_std)
+            self.reflectance_min.append(reflectance_min)
+            self.reflectance_max.append(reflectance_max)
+
 
             self.plot_wavelengths_reflectance(wavelengths, reflectance, (reflectance_min, reflectance_max), key)
         self.group_lot_wavelengths_reflectance(sort_key)  
@@ -238,14 +245,16 @@ class C_Plot_Wavelenght_reflectance:
         y_label = 'Reflectance'
         
         # Plot each entry with a different color
-        for i, (wavelengths_values, reflectance_values, std) in enumerate(zip(self.wavelengths_arr, self.reflectance_arr, self.reflectance_arr_std)):
-            plt.plot(wavelengths_values, reflectance_values, label=self.lables[i]) 
+        for i, (wavelengths_values, reflectance_values, std, max, min) in enumerate(zip(self.wavelengths_arr, self.reflectance_arr, self.reflectance_arr_std, self.reflectance_max, self.reflectance_min)):
+            plt.plot(wavelengths_values, reflectance_values, label=self.lables[i])  
             
                  
         plt.title("Reflectance vs Wavelength")
         plt.xlabel(x_label)
         plt.ylabel(y_label)
         plt.legend()
+        plt.grid(True)  
+
         #save to imae
         plt.savefig(f'{output_dir}grouped_wavelengths_reflectance_plot_by_{sort_key}.png')
         plt.show() 
@@ -271,8 +280,10 @@ class C_Plot_Wavelenght_reflectance:
         #reduce the number of ticks on the x axis
         plt.xticks(np.arange(0, len(x_points), len(x_points)/10), fontsize=8)
         plt.grid(True) 
+
         # Plot with std
         print(f"{lable}: min {min_vals} max: {max_vals}") 
+        #print(f"Reflectance:{reflectance}")  
         #plt.fill_between(wavelenghts, min_vals, max_vals, color='gray', alpha=0.3, label='Min–Max Range')        
         # Plot the data
         plt.plot(x_points, y_points) 
@@ -297,15 +308,16 @@ class C_analysis:
         self.samples = samples
         self.features_names = features_names 
     
-    def perform_covariance_analysis(self, filenames_key): #, samples_name = 'Samples', features_name = 'Features' 
+    def perform_covariance_analysis(self, filenames_key, normalise = True): #, samples_name = 'Samples', features_name = 'Features' 
         features_names = list(next(iter(self.init_dict.values()))[filenames_key].keys())
         samples = []
         for entry in self.init_dict.values():
             samples.append([entry[filenames_key][trait] for trait in features_names])
  
-        #normalise samples 
-        scaler = StandardScaler()
-        samples = scaler.fit_transform(samples) 
+        #normalise samples
+        if normalise:
+            scaler = StandardScaler()
+            samples = scaler.fit_transform(samples) 
         
         
         # Ensure the output directory exists
@@ -342,7 +354,7 @@ class C_Test_train_split:
 
         self.random_state = rand_state  # For reproducibility 
 
-    def make_training_n_test_sets(self, features_key, class_main_key, class_name, test_size=0.4, conditions_name = 'Conditions', conditions_key = 'Metadata'):
+    def make_training_n_test_sets(self, features_key, class_main_key, class_name, test_size=0.4, conditions_name = 'Conditions', conditions_key = 'Metadata', normalise = True):
         
         x, keys = self.extract_features(features_key)
         y, trait_key = self.extract_class(class_main_key, class_name)
@@ -350,9 +362,10 @@ class C_Test_train_split:
         
         self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test = self.stratified_split(x, y, conditions, test_size)
         
-        scaler = StandardScaler() 
-        self.x_train = scaler.fit_transform(self.x_train)
-        self.x_test = scaler.transform(self.x_test)
+        if normalise: 
+            scaler = StandardScaler() 
+            self.x_train = scaler.fit_transform(self.x_train)
+            self.x_test = scaler.transform(self.x_test)
 
         self.condition_distribution()
 
@@ -759,9 +772,12 @@ if __name__ == '__main__':
     dictManager = C_Dict_manager(dataDict)     
 
 
+
+    """
     reg = C_svr(dataDict)  
-    #reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2]) 
-    #reg.plot_svr_all_features(filenames_keys[4], filenames_keys[2])  #spectra takes too long   
+    reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2]) 
+    #reg.plot_svr_all_features(filenames_keys[4], filenames_keys[2])  #spectra takes too long
+    """   
    
     # Prepare data for covariance analysis on trait
     """
@@ -769,14 +785,18 @@ if __name__ == '__main__':
     Analysis.perform_covariance_analysis(filenames_keys[3])  
     Analysis.perform_covariance_analysis(filenames_keys[2])
     """  
-
+    
     # Ploting spectra based off conditions
     sort_key = 'Conditions'
      
     dataDictSort = dictManager.separate_dict_by_value(sort_key, filenames_keys[1]) #separate the dict by genotype 
+    dictManager.write_dict_to_file(dataDict, "original") 
+
+
     #for each entry to dataDictSort extract its wavelenght and reflectance to plot 
-    plotWR = C_Plot_Wavelenght_reflectance(dataDictSort)   
+    plotWR = C_Plot_Wavelenght_reflectance(dataDictSort)     
     plotWR.plot_dict_wavelenghts(sort_key, filenames_keys[4]) #group the wavelengths and reflectance by lables
+     
 
 
    
