@@ -245,8 +245,9 @@ class C_Plot_Wavelenght_reflectance:
         y_label = 'Reflectance'
         
         # Plot each entry with a different color
-        for i, (wavelengths_values, reflectance_values, std, max, min) in enumerate(zip(self.wavelengths_arr, self.reflectance_arr, self.reflectance_arr_std, self.reflectance_max, self.reflectance_min)):
-            plt.plot(wavelengths_values, reflectance_values, label=self.lables[i])  
+        for i, (wavelengths_values, reflectance_values, std, max_vals, min_vals) in enumerate(zip(self.wavelengths_arr, self.reflectance_arr, self.reflectance_arr_std, self.reflectance_max, self.reflectance_min)):
+            line, = plt.plot(wavelengths_values, reflectance_values, label=self.lables[i])
+            plt.fill_between(wavelengths_values, min_vals, max_vals, color = line.get_color(), alpha=0.3)   
             
                  
         plt.title("Reflectance vs Wavelength")
@@ -284,9 +285,10 @@ class C_Plot_Wavelenght_reflectance:
         # Plot with std
         print(f"{lable}: min {min_vals} max: {max_vals}") 
         #print(f"Reflectance:{reflectance}")  
-        #plt.fill_between(wavelenghts, min_vals, max_vals, color='gray', alpha=0.3, label='Min–Max Range')        
-        # Plot the data
-        plt.plot(x_points, y_points) 
+        # Plot the data 
+        line, = plt.plot(x_points, y_points)  
+        plt.fill_between(wavelenghts, min_vals, max_vals, color = line.get_color(), alpha=0.3)         
+
 
         #save plot as a png file
         plt.savefig(f'{output_dir}{lable}_wavelenght_reflectance_plot.png')
