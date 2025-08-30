@@ -23,6 +23,9 @@ import os
 import pandas as pd
 import csv
 
+import matplotlib
+matplotlib.use('TkAgg')
+
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import seaborn as sns  
@@ -96,13 +99,13 @@ class C_Data:
         for wavelenght in headers_wavelenght:
             if int(wavelenght) < self.wavelenght_min:    
                 #remove the row from the data frame
-                self.combined_df = self.combined_df.drop(columns=[wavelenght])
+                self.combined_df = self.combined_df.drop(columns=[wavelenght], errors='ignore') 
         if reduce_wavelenghts:
-            #remove wavelengths that are not a multieple of 5
-            for wavelenght in headers_wavelenght:
+            #remove wavelengths that are not a multieple of 5 
+            for wavelenght in headers_wavelenght: 
                 if int(wavelenght) % 5 != 0:    
                     #remove the row from the data frame
-                    self.combined_df = self.combined_df.drop(columns=[wavelenght])  
+                    self.combined_df = self.combined_df.drop(columns=[wavelenght],  errors='ignore')  
     
     #remove year, genotype, all wavelenghts, ect  
 
@@ -193,59 +196,10 @@ class C_Plot_Wavelenght_reflectance:
     def __init__(self, inital_dict = {}):
         self.wavelengths_arr = []
         self.reflectance_arr = []
+        self.reflectance_arr_std = []
         self.lables = [] 
         self.dataDictSort = inital_dict
-
-    def group_lot_wavelengths_reflectance(self, sort_key):
-        # plot each entry on the same plot, with different colors for each entry
-        # Ensure the output directory exists
-        output_dir = './data/figures/reflectance_v_wavelength/'
-        os.makedirs(output_dir, exist_ok=True)
-        plt.figure()
-        x_label = 'Wavelength (nm)'
-        y_label = 'Reflectance'
-        
-        # Plot each entry with a different color
-        for i, (wavelengths_values, reflectance_values) in enumerate(zip(self.wavelengths_arr, self.reflectance_arr)):
-            plt.plot(wavelengths_values, reflectance_values, label=self.lables[i]) 
-                 
-        plt.title("Reflectance vs Wavelength")
-        plt.xlabel(x_label)
-        plt.ylabel(y_label)
-        plt.legend()
-        #save to imae
-        plt.savefig(f'{output_dir}grouped_wavelengths_reflectance_plot_by_{sort_key}.png')
-        plt.show() 
-        plt.close()  
-
-    def plot_wavelengths_reflectance(self, wavelenghts, reflectance, lable):
-
-        # Ensure the output directory exists
-        output_dir = './data/figures/reflectance_v_wavelength/'
-        os.makedirs(output_dir, exist_ok=True) 
-
-        plt.figure()
-        x_label = 'Wavelength (nm)'
-        x_points = wavelenghts
-        y_label = 'Reflectance'
-        y_points = reflectance
-
-        plt.title(f"{lable}")
-        plt.xlabel(x_label)
-        plt.ylabel(y_label)
-        #reduce the number of ticks on the x axis
-        plt.xticks(np.arange(0, len(x_points), len(x_points)/10), fontsize=8)
-        
-        # Plot the data
-        plt.plot(x_points, y_points)
-
-        #save plot as a png file
-        plt.savefig(f'{output_dir}{lable}_wavelenght_reflectance_plot.png')
-        plt.show() 
     
-        
-        plt.close()   
-
     def plot_dict_wavelenghts(self, sort_key, dict_key):
 
         for key, entries in self.dataDictSort.items():
@@ -260,14 +214,76 @@ class C_Plot_Wavelenght_reflectance:
                     wavelength_accumulator[wl] = wavelength_accumulator.get(wl, 0) + refl
                     count[wl] = count.get(wl, 0) + 1
 
-            # Compute average reflectance per wavelength
+            # Compute mean and std deviation per wavelength
             wavelengths = sorted(wavelength_accumulator.keys())
-            reflectance = [wavelength_accumulator[wl] / count[wl] for wl in wavelengths]
-            self.wavelengths_arr.append(wavelengths)
-            self.reflectance_arr.append(reflectance)
+            reflectance = [np.mean(wavelength_accumulator[wl]) for wl in wavelengths]
+            reflectance_std = [np.std(wavelength_accumulator[wl]) for wl in wavelengths]
+            reflectance_min = [np.min(wavelength_accumulator[wl]) for wl in wavelengths]
+            reflectance_max = [np.max(wavelength_accumulator[wl]) for wl in wavelengths]
 
-            self.plot_wavelengths_reflectance(wavelengths, reflectance, key)
+            self.wavelengths_arr.append(wavelengths) 
+            self.reflectance_arr.append(reflectance)
+            self.reflectance_arr_std.append(reflectance_std)
+
+            self.plot_wavelengths_reflectance(wavelengths, reflectance, (reflectance_min, reflectance_max), key)
         self.group_lot_wavelengths_reflectance(sort_key)  
+
+    def group_lot_wavelengths_reflectance(self, sort_key):
+        # plot each entry on the same plot, with different colors for each entry
+        # Ensure the output directory exists
+        output_dir = './data/figures/reflectance_v_wavelength/'
+        os.makedirs(output_dir, exist_ok=True)
+        plt.figure()
+        x_label = 'Wavelength (nm)'
+        y_label = 'Reflectance'
+        
+        # Plot each entry with a different color
+        for i, (wavelengths_values, reflectance_values, std) in enumerate(zip(self.wavelengths_arr, self.reflectance_arr, self.reflectance_arr_std)):
+            plt.plot(wavelengths_values, reflectance_values, label=self.lables[i]) 
+            
+                 
+        plt.title("Reflectance vs Wavelength")
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
+        plt.legend()
+        #save to imae
+        plt.savefig(f'{output_dir}grouped_wavelengths_reflectance_plot_by_{sort_key}.png')
+        plt.show() 
+        plt.close()  
+
+    def plot_wavelengths_reflectance(self, wavelenghts, reflectance, min_max, lable):
+
+        # Ensure the output directory exists
+        output_dir = './data/figures/reflectance_v_wavelength/'
+        os.makedirs(output_dir, exist_ok=True) 
+
+        plt.figure()
+        x_label = 'Wavelength (nm)'
+        x_points = wavelenghts
+        y_label = 'Reflectance'
+        y_points = reflectance
+        min_vals = np.array(min_max[0])
+        max_vals = np.array(min_max[1]) 
+
+        plt.title(f"{lable}")
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
+        #reduce the number of ticks on the x axis
+        plt.xticks(np.arange(0, len(x_points), len(x_points)/10), fontsize=8)
+        plt.grid(True) 
+        # Plot with std
+        print(f"{lable}: min {min_vals} max: {max_vals}") 
+        #plt.fill_between(wavelenghts, min_vals, max_vals, color='gray', alpha=0.3, label='Min–Max Range')        
+        # Plot the data
+        plt.plot(x_points, y_points) 
+
+        #save plot as a png file
+        plt.savefig(f'{output_dir}{lable}_wavelenght_reflectance_plot.png')
+        plt.show() 
+    
+        
+        plt.close()   
+
     
  
 class C_analysis:
@@ -307,7 +323,7 @@ class C_analysis:
         #save to self.output_dir
         plt.savefig(f'{self.output_dir_covariance}covariance_matrix_{filenames_key}.png')
         plt.show() 
-        plt.close()  # Close the plot to free memory 
+        plt.close()  
         print(f"Covariance matrix saved to {self.output_dir_covariance}covariance_matrix_{filenames_key}.png")
 
 #~~~~~~~~~~~~~~~~~~~~~ Regressors ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
@@ -415,7 +431,8 @@ class C_svr:
             self.srv_exists = False
             raise ValueError(f"Unsupported kernel: {kernalType!r}")
 
-    def plot_svr_all_features(self, features_key, class_main_key):
+    def plot_svr_all_features(self, features_key, class_main_key): 
+        print("Start new set of srv.") 
 
         class_names = list(next(iter(dataDict.values()))[class_main_key].keys())
         # Prepare for combined plotting 
@@ -429,11 +446,12 @@ class C_svr:
         axes = axes.flatten()
 
         for i, name in enumerate(class_names):  
+            print(name)
             self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key    = self.tnt.make_training_n_test_sets(features_key, class_main_key, name) 
             svr = self.get_svr_kernal("linear") 
             svr.fit(self.x_train, self.y_train) 
             y_pred_test = svr.predict(self.x_test)
-            ax = axes[i]
+            ax = axes[i] 
 
             # Map conditions to colors
             unique_conditions = np.unique(self.cond_test)
@@ -462,10 +480,16 @@ class C_svr:
         for j in range(i+1, len(axes)):
             fig.delaxes(axes[j])
 
-        fig.suptitle("SVR Test Set Performance for All Traits", fontsize=16)
-        fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-        fig.savefig(f"{output_dir}svr_all_traits.png")  # Save figure
+        lable = features_key 
+        fig.suptitle(f"SVR Test Set Performance for All Traits using {lable} as features", fontsize=16)
+        fig.tight_layout(rect=[0, 0.03, 1, 0.95]) 
+        fig_path = f"{output_dir}svr_all_traits_{lable}.png"
+        fig.savefig(fig_path) 
+        print(f"Figure saved to: {fig_path}")
         plt.show() 
+        plt.close('all') 
+        plt.clf()  
+ 
 
 class C_Dession_trees:
     def __init__(self, dataDict, x_train, x_test, y_train, y_test):
@@ -730,30 +754,30 @@ if __name__ == '__main__':
         'Spectra'
     ]
      
-    data = C_Data(filenames, filenames_keys, reduce_wavelenghts = True)  
+    data = C_Data(filenames, filenames_keys, reduce_wavelenghts = False)    
     df, dataDict = data.load_data()
-    dictManager = C_Dict_manager(dataDict)   
-
+    dictManager = C_Dict_manager(dataDict)     
 
 
     reg = C_svr(dataDict)  
-    reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2])  
-    
-    
-    
-    """     
+    #reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2]) 
+    #reg.plot_svr_all_features(filenames_keys[4], filenames_keys[2])  #spectra takes too long   
+   
     # Prepare data for covariance analysis on trait
-    Analysis = C_analysis(df, dataDict)  
+    """
+    Analysis = C_analysis(df, dataDict)   
     Analysis.perform_covariance_analysis(filenames_keys[3])  
+    Analysis.perform_covariance_analysis(filenames_keys[2])
+    """  
 
     # Ploting spectra based off conditions
     sort_key = 'Conditions'
      
     dataDictSort = dictManager.separate_dict_by_value(sort_key, filenames_keys[1]) #separate the dict by genotype 
-    #for each entry to dataDictSort extract its wavelenght and reflectance to plot
+    #for each entry to dataDictSort extract its wavelenght and reflectance to plot 
     plotWR = C_Plot_Wavelenght_reflectance(dataDictSort)   
     plotWR.plot_dict_wavelenghts(sort_key, filenames_keys[4]) #group the wavelengths and reflectance by lables
-    """
+
 
    
      
