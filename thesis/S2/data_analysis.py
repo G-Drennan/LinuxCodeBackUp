@@ -794,7 +794,7 @@ class C_PCA:
         ax.set_ylabel('PC2')
         ax.legend()
         ax.set_title(f'PCA Clusters by {label_col}')
-        plt.tight_layout() 
+        #plt.tight_layout()  
         plt.savefig(f'{self.output_dir}pca_clusters_{self.feature_key}_sort_by_{self.sort_term_name}.png')
         plt.show()
         plt.close() 
@@ -819,9 +819,9 @@ if __name__ == '__main__':
         'Traits',
         'Hs_Traits',
         'Spectra'
-    ]
+    ] 
      
-    data = C_Data(filenames, filenames_keys, reduce_wavelenghts = False)    
+    data = C_Data(filenames, filenames_keys, reduce_wavelenghts = True)     
     df, dataDict = data.load_data()
     dictManager = C_Dict_manager(dataDict)
 
@@ -831,6 +831,9 @@ if __name__ == '__main__':
 
 
     pca = C_PCA(dataDict, sort_key)
+    pca.plot_pca_clusters() 
+
+    pca = C_PCA(dataDict, sort_key, feature_key=filenames_keys[4])  
     pca.plot_pca_clusters()     
 
 
