@@ -778,7 +778,7 @@ class C_PCA:
         self.df['PC1'], self.df['PC2'] = X_pca[:, 0], X_pca[:, 1]
 
         fig, ax = plt.subplots(figsize=(8, 6))
-        colors = plt.cm.get_cmap('tab10', self.df[label_col].nunique())
+        colors = plt.colormaps['tab10'] 
 
         for i, condition in enumerate(self.df[label_col].unique()):
             subset = self.df[self.df[label_col] == condition]
