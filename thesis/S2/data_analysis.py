@@ -31,6 +31,7 @@ import matplotlib.cm as cm
 import seaborn as sns  
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter 
 from collections import defaultdict  
+from scipy.spatial import ConvexHull
 
 from sklearn.covariance import EmpiricalCovariance
 from sklearn.preprocessing import StandardScaler 
@@ -180,7 +181,7 @@ class C_Dict_manager:
             sortedDict[value][id] = entry
         #write to txt file (sorted_dict) 
         lable = f"sorted_by_{value_key}"
-        self.write_dict_to_file(self.inital_dict, lable)  
+        self.write_dict_to_file(sortedDict, lable)   
 
         return sortedDict 
 
@@ -743,10 +744,61 @@ class C_gen_alg:
         ax.set(ylim=(x,y)) 
 
 class C_PCA: 
-    def __init__(self,df, dataDict): 
-        self.dataDict = dataDict
-        #datadict in form {ID: {Metadata: {}, Traits: {}, Hs_Traits: {}, Spectra: {}}}
-        self.df = df
+    def __init__(self, dataDict, sort_key,  feature_key='Hs_Traits'): 
+        dictManager = C_Dict_manager(dataDict) 
+        self.sortedDataDict = dictManager.separate_dict_by_value(sort_key, filenames_keys[1]) #separate the dict by genotype 
+        self.feature_key = feature_key 
+        self.sort_term_name = sort_key
+        self.output_dir = "./data/pca/"  
+        
+        self.sorted_dict_to_dataframe()
+        
+
+    def sorted_dict_to_dataframe(self):
+        rows = []
+        for condition, samples in self.sortedDataDict.items(): 
+            for sample_id, sample_data in samples.items():
+                features = sample_data.get(self.feature_key, {})
+                row = {'ID': sample_id, self.sort_term_name: condition}  
+                row.update(features)
+                rows.append(row)
+        self.df =  pd.DataFrame(rows)
+        #save the data frame
+        output_dir_csv = './data/'  
+        os.makedirs(output_dir_csv, exist_ok=True)    
+        self.df.to_csv(f'{output_dir_csv}pca_input_dataframe_{self.feature_key}_sort_by_{self.sort_term_name}.csv', index=False)
+
+    def plot_pca_clusters(self):
+
+        #assume teh feature cols always exclude the first 2 and the rest are included
+        feature_cols = self.df.columns[2:].tolist() 
+        label_col = self.sort_term_name  
+        pca = PCA(n_components=2)
+        X_pca = pca.fit_transform(self.df[feature_cols])
+        self.df['PC1'], self.df['PC2'] = X_pca[:, 0], X_pca[:, 1]
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+        colors = plt.cm.get_cmap('tab10', self.df[label_col].nunique())
+
+        for i, condition in enumerate(self.df[label_col].unique()):
+            subset = self.df[self.df[label_col] == condition]
+            ax.scatter(subset['PC1'], subset['PC2'], label=condition, color=colors(i), alpha=0.6)
+
+            if len(subset) >= 3:
+                points = subset[['PC1', 'PC2']].values
+                hull = ConvexHull(points)
+                hull_pts = points[hull.vertices]
+                ax.plot(*zip(*np.append(hull_pts, [hull_pts[0]], axis=0)), color=colors(i), lw=2)
+
+        ax.set_xlabel('PC1')
+        ax.set_ylabel('PC2')
+        ax.legend()
+        ax.set_title(f'PCA Clusters by {label_col}')
+        plt.tight_layout() 
+        plt.savefig(f'{self.output_dir}pca_clusters_{self.feature_key}_sort_by_{self.sort_term_name}.png')
+        plt.show()
+        plt.close() 
+
     
     
 
@@ -771,7 +823,15 @@ if __name__ == '__main__':
      
     data = C_Data(filenames, filenames_keys, reduce_wavelenghts = False)    
     df, dataDict = data.load_data()
-    dictManager = C_Dict_manager(dataDict)     
+    dictManager = C_Dict_manager(dataDict)
+
+    # Ploting spectra based off conditions
+    sort_key = 'Conditions'
+    dictManager.write_dict_to_file(dataDict, "original") 
+
+
+    pca = C_PCA(dataDict, sort_key)
+    pca.plot_pca_clusters()     
 
 
 
@@ -787,18 +847,15 @@ if __name__ == '__main__':
     Analysis.perform_covariance_analysis(filenames_keys[3])  
     Analysis.perform_covariance_analysis(filenames_keys[2])
     """  
-    
-    # Ploting spectra based off conditions
-    sort_key = 'Conditions'
-     
-    dataDictSort = dictManager.separate_dict_by_value(sort_key, filenames_keys[1]) #separate the dict by genotype 
-    dictManager.write_dict_to_file(dataDict, "original") 
 
+    """
+    
 
     #for each entry to dataDictSort extract its wavelenght and reflectance to plot 
     plotWR = C_Plot_Wavelenght_reflectance(dataDictSort)     
     plotWR.plot_dict_wavelenghts(sort_key, filenames_keys[4]) #group the wavelengths and reflectance by lables
-     
+    
+    """
 
 
    
