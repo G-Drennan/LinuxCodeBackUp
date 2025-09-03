@@ -307,8 +307,7 @@ class C_analysis:
         self.output_dir_covariance = './data/figures/covariance/'
         os.makedirs(self.output_dir_covariance, exist_ok=True)   
 
-    def update_samples_features(self, samples, features_names):
-        self.samples = samples
+    def update_features(self, features_names): 
         self.features_names = features_names 
     
     def perform_covariance_analysis(self, filenames_key, normalise = True): #, samples_name = 'Samples', features_name = 'Features' 
@@ -321,9 +320,7 @@ class C_analysis:
         if normalise:
             scaler = StandardScaler()
             samples = scaler.fit_transform(samples) 
-        
-        
-        # Ensure the output directory exists
+
         cov = EmpiricalCovariance().fit(samples)
         sns.heatmap(
             cov.covariance_,
@@ -340,6 +337,46 @@ class C_analysis:
         plt.show() 
         plt.close()  
         print(f"Covariance matrix saved to {self.output_dir_covariance}covariance_matrix_{filenames_key}.png")
+
+    def perform_covariance_analysis_two_diff_data_sets(self, filenames_key_1, filenames_key_2,  normalise = True):
+        filenames_key_1 = list(next(iter(self.init_dict.values()))[filenames_key_1].keys())
+        samples_1 = []
+        for entry in self.init_dict.values():
+            samples_1.append([entry[filenames_key_1][trait] for trait in filenames_key_1])
+
+        filenames_key_2 = list(next(iter(self.init_dict.values()))[filenames_key_2].keys())
+        samples_2 = []
+        for entry in self.init_dict.values():
+            samples_2.append([entry[filenames_key_2][trait] for trait in filenames_key_2])
+        
+        #One side of the covariance matrix is one data set the other the otehr data set
+        combined_samples = np.hstack((samples_1, samples_2))
+         #normalise both samples
+        if normalise:
+            scaler = StandardScaler()
+            combined_samples = scaler.fit_transform(combined_samples) 
+        
+        combined_features = filenames_key_1 + filenames_key_2
+
+        cov = EmpiricalCovariance().fit(combined_samples)
+        sns.heatmap(
+            cov.covariance_,
+            annot=True,
+            cmap='coolwarm',
+            square=True,
+            xticklabels=combined_features,
+            yticklabels=combined_features 
+        )
+        plt.title('Covariance Matrix')
+        #save to self.output_dir
+        plt.savefig(f'{self.output_dir_covariance}covariance_matrix_{filenames_key_1}_and_{filenames_key_2}.png')
+        plt.show()
+        plt.close()
+        print(f"Covariance matrix saved to {self.output_dir_covariance}covariance_matrix_{filenames_key_1}_and_{filenames_key_2}.png") 
+
+
+
+
 
 #~~~~~~~~~~~~~~~~~~~~~ Regressors ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 
@@ -521,29 +558,34 @@ class C_Dession_trees:
         self.models_dict = {"RF":"Random Forest", "AB":"Ada Boost", "GB":"Gradient Boosting", "DT":"Decision Tree"}
         self.model = None #model 
         self.model_exists = False 
+        self.y_pred = None 
 
     def train_model(self, features_key, class_main_key, class_name, model = "RF"): # features_name,
   
         print(f"{class_name}: Training {model} model")  
         if model == "RF": 
+            print(model)
             self.random_forest_Regressor()
         elif model == "AB":
+            print(model)
             self.Ada_Boost_Regressor()
         elif model == "GB":
+            print(model)
             self.Gradient_Boosting_Regressor()
         elif model == "DT": 
+            print(model)
             self.desision_tree_regressor() 
         
         
-        self.accuracy = accuracy_score(self.y_test, self.y_pred)  
-        print(f"{self.models_dict[model]} Accuracy: {self.accuracy:.2f}")
+        self.r2_score, self.mse = self.my_accuracy_score()    
+        print(f"{self.models_dict[model]} R2: {self.r2_score:.2f}")
         
-        scores, cross_val_mean = self.cross_val() 
+        scores, cross_val_mean = self.cross_val()  
 
         print(f"Cross-validation scores of {self.models_dict[model]}: {scores}")
         print(f"Mean cross-validation score: {cross_val_mean:.2f}") 
 
-        return self.model, self.accuracy, cross_val_mean 
+        return self.model, self.r2_score, cross_val_mean  
 
     def desision_tree_regressor(self, max_depth=5):
         
@@ -579,11 +621,15 @@ class C_Dession_trees:
         self.model_exists = True
         return self.model#, self.accuracy
     
-    def my_accuracy_score(self, y_pred): 
-        accuracy = np.mean(y_pred == self.y_test)
-        score = self.model.score(self.x_test, self.y_test) 
+    def my_accuracy_score(self): 
+        #accuracy = np.mean(y_pred == self.y_test)
+        #score = self.model.score(self.x_test, self.y_test) 
+
+        mse = mean_squared_error(self.y_test, self.y_pred)
+        r2 = r2_score(self.y_test, self.y_pred)
+
         #F value F1 = 2 * (precision * recall) / (precision + recall
-        return accuracy, score, y_pred
+        return r2, mse 
     
     #Cross-validation test the models performance. 
     def cross_val(self, model = None, n_splits=10):
@@ -593,7 +639,7 @@ class C_Dession_trees:
             #Array of scores of the estimator for each run of the cross validation.
             cross_val_mean = scores.mean()
         elif model!= None:
-            scores = cross_val_score(model, self.x_train, self.y_train, cv=n_splits) 
+            scores = cross_val_score(model, self.x_train, self.y_train, cv=n_splits, scoring='r2') 
             cross_val_mean = scores.mean() 
 
         else:
@@ -625,6 +671,10 @@ class C_gen_alg:
         self.model_exists = False 
         self.dataDict = dataDict 
         self.tnt = C_Test_train_split(dataDict)
+        self.outPutPath = './data/ML/'
+        self.score_file_path = None 
+        #create the output dir if it does not exist
+        os.makedirs(self.outPutPath, exist_ok=True) 
 
         #class_names = list(next(iter(dataDict.values()))[class_main_key].keys())
         #for i, name in enumerate(class_names): #for each class name
@@ -632,50 +682,98 @@ class C_gen_alg:
     
     def gen_alg_on_best_model(self, features_key, class_main_key, class_name):
         #chromo_df_bc,score_bc=generations(data_bc,label_bc)
+        self.score_file_path = os.path.join(self.outPutPath, f'model_scores_{features_key}.txt')        #create the file 
+        #whipe the file if it exists
+        with open(f'{self.score_file_path}', 'w') as f:
+            f.write(f"--- Model scores for features: {features_key} ---\n") 
         self.find_best_model(features_key, class_main_key, class_name)
 
-        n_feat = self.x_train.shape[1]  
-        best_chromo_x, best_score = self.generations(n_feat=n_feat)
+        n_feat = self.x_train.shape[1] 
+        print(n_feat)  
+        n_gen= 10
+        best_chromo_x, best_score = self.generations(n_feat=n_feat, n_gen=n_gen) #size=5, n_parents=4, 
         self.best_chromo_x_overall = max(zip(best_score, best_chromo_x), key=lambda x: x[0])[1]
  
         print("Best feature subset found:", np.where(self.best_chromo_x_overall)[0])
-        print("Corresponding accuracy:", best_score[0])
+        #translate the best chromo to the feature names
+        feature_names = np.array(self.tnt.extract_features(features_key)[1])
+        best_features = feature_names[self.best_chromo_x_overall]
+        print("Best feature names:", best_features)
+        print("Corresponding R2:", best_score[0]) 
 
+        with open(f'{self.score_file_path}', 'a') as f: 
+            f.write(f"\n--- Generation alg ---\n") 
+            f.write(f"num genrations: {n_gen}\n")
+            f.write(f"Best feature subset found: {np.where(self.best_chromo_x_overall)[0]},\n Best feature names: {best_features},\n Corresponding R2: {best_score[0]}\n") 
+        self.run_best_chromo_on_other_ML(features_key, class_main_key, class_name)
+        #
+    #func with the best_chromo_x_overall, run each ML model using the  best_chromo_x_overall
+    def run_best_chromo_on_other_ML(self, features_key, class_main_key, class_name): 
+        #write this func 
+        full_x, feature_names = self.tnt.extract_features(features_key)
+        feature_names = np.array(feature_names) 
+        selected_indices = np.where(self.best_chromo_x_overall)[0]
+        selected_features = feature_names[self.best_chromo_x_overall]
+
+        # Subset the data to selected features
+        x_selected = full_x[:, selected_indices]
+
+        # Re-split using selected features
+        self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key = \
+            self.tnt.make_training_n_test_sets(features_key, class_main_key, class_name)  
+
+        # Train and evaluate all models on selected features
+        model_obj = C_Dession_trees(self.dataDict, self.x_train, self.x_test, self.y_train, self.y_test)
+        with open(f'{self.score_file_path}', 'a') as f: 
+            f.write("\n--- Performance on Best Chromosome Feature Subset ---\n")
+            f.write(f"Selected Features: {selected_features.tolist()}\n")
+
+            for i, model in enumerate(model_obj.models):
+                model, r2_score, cross_val_mean = model_obj.train_model(features_key, class_main_key, class_name, model)
+                f.write(f"{model_obj.models_full[i]}: R2={r2_score:.2f}, Cross-val mean={cross_val_mean:.2f}\n")
+
+        print("Finished evaluating all models on best feature subset.")  
+
+    
     def find_best_model(self, features_key, class_main_key, name): 
         max_cross_val_mean = 0
 
         self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key  = self.tnt.make_training_n_test_sets(features_key, class_main_key, name) 
         model_obj = C_Dession_trees(dataDict, self.x_train, self.x_test, self.y_train, self.y_test) 
-        for i, model in enumerate(model_obj.models_full):
+        for i, model in enumerate(model_obj.models): #        self.models = ["RF", "AB", "GB", "DT"]
+ 
             #genetic feature selection, save best features from first run use for other runs for consistencey and comparision. 
-            model, accuracy, cross_val_mean  = model_obj.train_model(features_key, class_main_key, name, model) 
-            if cross_val_mean > max_cross_val_mean :
+            model, r2_score, cross_val_mean  = model_obj.train_model(features_key, class_main_key, name, model)
+            #write the model and its score to a file
+            with open(f'{self.score_file_path}', 'a') as f:  
+                f.write(f"{model_obj.models_full[i]}: R2={r2_score:.2f}, Cross-val mean={cross_val_mean:.2f}\n")
+
+            if cross_val_mean > max_cross_val_mean : 
                 max_cross_val_mean = cross_val_mean
                 self.model = model
                 self.model_exists = True  
-                best_model_index = i 
+                best_model_index = i   
     
         print(f"{model_obj.models_full[best_model_index]} highest accuracy of {max_cross_val_mean}.") 
         
-    #data_bc = pd.read_csv("../input/data.csv")
-    #n_feat=data_bc.shape[1] 
-    #features are the x.test and x.train, the predicted are teh y_test, y_train
         
     def generations(self,n_feat,size=80,n_parents=64,mutation_rate=0.20,n_gen=5):
+        print("Start generations")
         best_chromo_x= []
         best_score= [] 
         population_nextgen= self.initilization_of_population(size,n_feat)
         for i in range(n_gen):
-            scores, pop_after_fit = self.fitness_score(population_nextgen)
+            scores, pop_after_fit = self.fitness_score(population_nextgen)  
             print('Best score in generation',i+1,':',scores[:1])  #2
             pop_after_sel = self.selection(pop_after_fit,n_parents)
-            pop_after_cross = self.crossover(pop_after_sel)
+            pop_after_cross = self.crossover(pop_after_sel) 
             population_nextgen = self.mutation(pop_after_cross,mutation_rate,n_feat)
             best_chromo_x.append(pop_after_fit[0])
             best_score.append(scores[0])
-        return best_chromo_x, best_score
+        return best_chromo_x, best_score 
 
     def initilization_of_population(self, size,n_feat):
+        print("Start initilization of population") 
         population = []
         for i in range(size):
             chromosome = np.ones(n_feat,dtype=np.bool)     
@@ -686,26 +784,29 @@ class C_gen_alg:
 
 
     def fitness_score(self, population, use_cross_val = False):
+        print("fitness_score")
         scores = []
         for chromosome in population:  
             #model is the curretn model.   
             #model = RandomForestClassifier(n_estimators=200, random_state=0)
             selected_features = np.where(chromosome)[0]
             self.model.fit(self.x_train[:, selected_features], self.y_train)
-            scores.append(self.retrive_score(chromosome))  
+            scores.append(self.retrive_score(chromosome, use_cross_val))   
         scores, population = np.array(scores), np.array(population) 
         inds = np.argsort(scores)                                     
-        return list(scores[inds][::-1]), list(population[inds,:][::-1]) 
+        return list(scores[inds][::-1]), list(population[inds,:][::-1])  
     
-    def retrive_score(self, chromosome, use_cross_val = False, ):
+    def retrive_score(self, chromosome, use_cross_val = False): 
+        #print("retrive_score")   
         if use_cross_val:
-            cv_scores = cross_val_score(self.model, self.x_train[:, chromosome], self.y_train, cv=10, scoring='accuracy')
+            cv_scores = cross_val_score(self.model, self.x_train[:, chromosome], self.y_train, cv=10, scoring='r2') 
             return cv_scores.mean()  
         else:
-            predictions = self.model.fit(self.x_train[:, chromosome], self.y_train).predict(self.x_test[:, chromosome])
-            return accuracy_score(self.y_test, predictions) 
+            predictions = self.model.predict(self.x_test[:, chromosome])    #self.model.fit(self.x_train[:, chromosome], self.y_train).predict(self.x_test[:, chromosome])
+            return r2_score(self.y_test, predictions)    
 
     def selection(self, pop_after_fit,n_parents):
+        print("selection")
         population_nextgen = []
         for i in range(n_parents):
             population_nextgen.append(pop_after_fit[i])
@@ -713,6 +814,7 @@ class C_gen_alg:
 
 
     def crossover(self, pop_after_sel):
+        print("crossover") 
         pop_nextgen = pop_after_sel
         for i in range(0,len(pop_after_sel),2):
             new_par = []
@@ -723,6 +825,7 @@ class C_gen_alg:
 
 
     def mutation(self, pop_after_cross,mutation_rate,n_feat):   
+        print("mutation")  
         mutation_range = int(mutation_rate*n_feat)
         pop_next_gen = []
         for n in range(0,len(pop_after_cross)):
@@ -740,7 +843,7 @@ class C_gen_alg:
         gen = [1,2,3,4,5]
         plt.figure(figsize=(6,4))
         ax = sns.pointplot(x=gen, y=score,color = c )
-        ax.set(xlabel="Generation", ylabel="Accuracy")
+        ax.set(xlabel="Generation", ylabel="R2") 
         ax.set(ylim=(x,y)) 
 
 class C_PCA: 
@@ -826,15 +929,21 @@ if __name__ == '__main__':
     dictManager = C_Dict_manager(dataDict)
 
     # Ploting spectra based off conditions
-    sort_key = 'Conditions'
+    sort_key = 'Conditions' 
     dictManager.write_dict_to_file(dataDict, "original") 
 
+    ga = C_gen_alg(dataDict)
+    class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
+    ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_names[0]) 
 
-    pca = C_PCA(dataDict, sort_key)
+    """
+    pca = C_PCA(dataDict, sort_key) 
     pca.plot_pca_clusters() 
 
     pca = C_PCA(dataDict, sort_key, feature_key=filenames_keys[4])  
-    pca.plot_pca_clusters()     
+    pca.plot_pca_clusters() 
+    """ 
+        
 
 
 

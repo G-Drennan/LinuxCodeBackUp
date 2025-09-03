@@ -1,0 +1,4 @@
+Random Forest: R2=0.71, Cross-val mean=0.67
+Ada Boost: R2=0.65, Cross-val mean=0.62
+Gradient Boosting: R2=0.69, Cross-val mean=0.66
+Decision Tree: R2=0.64, Cross-val mean=0.56
