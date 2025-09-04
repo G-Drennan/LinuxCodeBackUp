@@ -557,7 +557,7 @@ class C_Dession_trees:
         self.y_test = y_test 
         
 
-        self.models = ["RF", "AB", "GB", "DT", "svr_poly", "svr_linear"]
+        self.models = ["RF", "AB", "GB", "DT", "svr_linear"] 
         self.models_full = ["Random Forest", "Ada Boost", "Gradient Boosting", "Decision Tree", "Support Vector Machine polymonial", "Support Vector Machine linear"]  
         self.models_dict = {"RF":"Random Forest", "AB":"Ada Boost", "GB":"Gradient Boosting", "DT":"Decision Tree", "svr_linear": "Support Vector Machine linear", "svr_poly": "Support Vector Machine polymonial"} 
         self.model = None #model  
@@ -626,7 +626,7 @@ class C_Dession_trees:
         self.model_exists = True
         return self.model#, self.accuracy
 
-    def Gradient_Boosting_Regressor(self, n_est = 100, Lr = 0.1): 
+    def Gradient_Boosting_Regressor(self, n_est = 100, Lr = 0.1): #0.1  
         self.model = GradientBoostingRegressor(n_estimators=n_est, learning_rate = Lr)
         self.model.fit(self.x_train, self.y_train) 
         self.y_pred = self.model.predict(self.x_test)
@@ -634,7 +634,7 @@ class C_Dession_trees:
         self.model_exists = True
         return self.model#, self.accuracy
 
-    def Ada_Boost_Regressor(self, n_est = 100, Lr = 0.1): 
+    def Ada_Boost_Regressor(self, n_est = 100, Lr = 0.01):  #0.01  
         self.model = AdaBoostRegressor(n_estimators=100, learning_rate=1.0)
         self.model.fit(self.x_train, self.y_train) 
         self.y_pred = self.model.predict(self.x_test)
@@ -963,7 +963,7 @@ if __name__ == '__main__':
     sort_key = 'Conditions' 
     dictManager.write_dict_to_file(dataDict, "original") 
 
-    ga = C_gen_alg(dataDict, n_gen = 10)  
+    ga = C_gen_alg(dataDict, n_gen = 20)   
     class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
     ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_names[0]) 
  
