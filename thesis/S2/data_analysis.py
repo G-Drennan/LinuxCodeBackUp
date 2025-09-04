@@ -710,7 +710,6 @@ class C_gen_alg:
 
         #class_names = list(next(iter(dataDict.values()))[class_main_key].keys())
         #for i, name in enumerate(class_names): #for each class name
-
     
     def gen_alg_on_best_model(self, features_key, class_main_key, class_name):
         #chromo_df_bc,score_bc=generations(data_bc,label_bc)
@@ -718,6 +717,8 @@ class C_gen_alg:
         #whipe the file if it exists
         with open(f'{self.score_file_path}', 'w') as f:
             f.write(f"--- Model scores for features: {features_key} ---\n") 
+        
+        self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key  = self.tnt.make_training_n_test_sets(features_key, class_main_key, class_name) 
         self.find_best_model(features_key, class_main_key, class_name)
 
         n_feat = self.x_train.shape[1] 
@@ -727,8 +728,8 @@ class C_gen_alg:
  
         print("Best feature subset found:", np.where(self.best_chromo_x_overall)[0])
         #translate the best chromo to the feature names
-        feature_names = np.array(self.tnt.extract_features(features_key)[1])
-        best_features = feature_names[self.best_chromo_x_overall]
+        self.feature_names = np.array(self.tnt.extract_features(features_key)[1])
+        best_features = self.feature_names[self.best_chromo_x_overall]
         print("Best feature names:", best_features)
         print("Corresponding R2:", best_score[0]) 
 
@@ -742,18 +743,13 @@ class C_gen_alg:
         #
     #func with the best_chromo_x_overall, run each ML model using the  best_chromo_x_overall
     def run_best_chromo_on_other_ML(self, features_key, class_main_key, class_name): 
-        #write this func 
-        full_x, feature_names = self.tnt.extract_features(features_key)
-        feature_names = np.array(feature_names) 
+        
         selected_indices = np.where(self.best_chromo_x_overall)[0]
-        selected_features = feature_names[self.best_chromo_x_overall]
+        selected_features = self.feature_names[self.best_chromo_x_overall]
 
         # Subset the data to selected features
-        x_selected = full_x[:, selected_indices]
-
-        # Re-split using selected features
-        self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key = \
-            self.tnt.make_training_n_test_sets(features_key, class_main_key, class_name)  
+        self.x_train = self.x_train[:, selected_indices]
+        self.x_test = self.x_test[:, selected_indices]  
 
         # Train and evaluate all models on selected features
         model_obj = C_Dession_trees(self.dataDict, self.x_train, self.x_test, self.y_train, self.y_test)
@@ -768,10 +764,9 @@ class C_gen_alg:
         print("Finished evaluating all models on best feature subset.")  
 
     
-    def find_best_model(self, features_key, class_main_key, name): 
+    def find_best_model(self, features_key, class_main_key, name):  
         max_cross_val_mean = 0
 
-        self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key  = self.tnt.make_training_n_test_sets(features_key, class_main_key, name) 
         model_obj = C_Dession_trees(dataDict, self.x_train, self.x_test, self.y_train, self.y_test) 
         for i, model in enumerate(model_obj.models): #        self.models = ["RF", "AB", "GB", "DT"]
  

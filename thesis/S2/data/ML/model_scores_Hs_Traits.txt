@@ -1,27 +1,29 @@
 --- Model scores for features: Hs_Traits ---
-Random Forest: R2=0.70, Cross-val mean=0.66
-Ada Boost: R2=0.66, Cross-val mean=0.63
-Gradient Boosting: R2=0.70, Cross-val mean=0.66
-Decision Tree: R2=0.61, Cross-val mean=0.56
-Support Vector Machine polymonial: R2=0.61, Cross-val mean=0.02
-Support Vector Machine linear: R2=0.61, Cross-val mean=0.68
-
---- Generation alg ---
-num genrations: 10
-Best feature subset found: [ 0  3  4  8 10 11 13 15 16 18],
- Best feature names: ['Leaf Structure Index' 'Cellulose Absorption Index'
- 'Nitrogen Related Index NRI1510' 'Disease Water Stress Index 3'
- 'Disease Water Stress Index 5' 'Chlorophyll content'
- 'Renormalized Difference Vegetation Index'
- 'Normalized Difference Vegetation Index1' 'Leaf Area Index'
- 'Enhanced Vegetation Index'],
- Corresponding R2: 0.7510976982356347
-
---- Performance on Best Chromosome Feature Subset ---
-Selected Features: ['Leaf Structure Index', 'Cellulose Absorption Index', 'Nitrogen Related Index NRI1510', 'Disease Water Stress Index 3', 'Disease Water Stress Index 5', 'Chlorophyll content', 'Renormalized Difference Vegetation Index', 'Normalized Difference Vegetation Index1', 'Leaf Area Index', 'Enhanced Vegetation Index']
 Random Forest: R2=0.71, Cross-val mean=0.67
 Ada Boost: R2=0.64, Cross-val mean=0.62
 Gradient Boosting: R2=0.69, Cross-val mean=0.66
-Decision Tree: R2=0.64, Cross-val mean=0.57
-Support Vector Machine polymonial: R2=0.64, Cross-val mean=0.02
-Support Vector Machine linear: R2=0.64, Cross-val mean=0.68
+Decision Tree: R2=0.62, Cross-val mean=0.57
+Support Vector Machine polymonial: R2=0.62, Cross-val mean=0.02
+Support Vector Machine linear: R2=0.62, Cross-val mean=0.68
+
+--- Generation alg ---
+num genrations: 10
+Best feature subset found: [ 1  3  4  5  7  8  9 10 13 14 15 16 17],
+ Best feature names: ['Chlorophyll index' 'Cellulose Absorption Index'
+ 'Nitrogen Related Index NRI1510' 'Nitrogen Related Index NRI850'
+ 'Disease Water Stress Index 2' 'Disease Water Stress Index 3'
+ 'Disease Water Stress Index 4' 'Disease Water Stress Index 5'
+ 'Renormalized Difference Vegetation Index'
+ 'Green Difference Vegetation Index'
+ 'Normalized Difference Vegetation Index1' 'Leaf Area Index'
+ 'Infrared Percentage Vegetation Index'],
+ Corresponding R2: 0.753314779169111
+
+--- Performance on Best Chromosome Feature Subset ---
+Selected Features: ['Chlorophyll index', 'Cellulose Absorption Index', 'Nitrogen Related Index NRI1510', 'Nitrogen Related Index NRI850', 'Disease Water Stress Index 2', 'Disease Water Stress Index 3', 'Disease Water Stress Index 4', 'Disease Water Stress Index 5', 'Renormalized Difference Vegetation Index', 'Green Difference Vegetation Index', 'Normalized Difference Vegetation Index1', 'Leaf Area Index', 'Infrared Percentage Vegetation Index']
+Random Forest: R2=0.71, Cross-val mean=0.65
+Ada Boost: R2=0.64, Cross-val mean=0.62
+Gradient Boosting: R2=0.70, Cross-val mean=0.65
+Decision Tree: R2=0.63, Cross-val mean=0.56
+Support Vector Machine polymonial: R2=0.63, Cross-val mean=-1.06
+Support Vector Machine linear: R2=0.63, Cross-val mean=0.69
