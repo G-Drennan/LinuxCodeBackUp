@@ -322,15 +322,19 @@ class C_analysis:
             samples = scaler.fit_transform(samples) 
 
         cov = EmpiricalCovariance().fit(samples)
+        #plt.figure(figsize=(14, 12))  
         sns.heatmap(
             cov.covariance_,
             annot=True,
+            fmt=".2f", 
             cmap='coolwarm',
             square=True,
             xticklabels=features_names,
-            yticklabels=features_names 
+            yticklabels=features_names,
+            #annot_kws={"size": 8}   
         )
         plt.title('Covariance Matrix') 
+        
         
         #save to self.output_dir
         plt.savefig(f'{self.output_dir_covariance}covariance_matrix_{filenames_key}.png')
@@ -553,10 +557,10 @@ class C_Dession_trees:
         self.y_test = y_test 
         
 
-        self.models = ["RF", "AB", "GB", "DT"]
-        self.models_full = ["Random Forest", "Ada Boost", "Gradient Boosting", "Decision Tree"] 
-        self.models_dict = {"RF":"Random Forest", "AB":"Ada Boost", "GB":"Gradient Boosting", "DT":"Decision Tree"}
-        self.model = None #model 
+        self.models = ["RF", "AB", "GB", "DT", "svr_poly", "svr_linear"]
+        self.models_full = ["Random Forest", "Ada Boost", "Gradient Boosting", "Decision Tree", "Support Vector Machine polymonial", "Support Vector Machine linear"]  
+        self.models_dict = {"RF":"Random Forest", "AB":"Ada Boost", "GB":"Gradient Boosting", "DT":"Decision Tree", "svr_linear": "Support Vector Machine linear", "svr_poly": "Support Vector Machine polymonial"} 
+        self.model = None #model  
         self.model_exists = False 
         self.y_pred = None 
 
@@ -575,6 +579,9 @@ class C_Dession_trees:
         elif model == "DT": 
             print(model)
             self.desision_tree_regressor() 
+        elif model == "svr_rbf" or "svr_linear" or "svr_poly":
+            print(model)
+            self.svr(model) 
         
         
         self.r2_score, self.mse = self.my_accuracy_score()    
@@ -587,7 +594,30 @@ class C_Dession_trees:
 
         return self.model, self.r2_score, cross_val_mean  
 
-    def desision_tree_regressor(self, max_depth=5):
+    def svr(self, model_key):
+        kernel_map = {
+            "svr_rbf": "rbf",
+            "svr_linear": "linear",
+            "svr_poly": "poly"
+        } 
+        kernalType = kernel_map.get(model_key)
+        if kernalType == "rbf":
+            self.model =  SVR(kernel=kernalType, C=100, gamma=0.1, epsilon=0.1)
+        elif kernalType == "linear":
+            self.model =  SVR(kernel=kernalType, C=100, gamma="auto")
+        elif kernalType == "poly": 
+            self.model =  SVR(
+                    kernel=kernalType, 
+                    C=100,
+                    gamma="auto",
+                    degree=3,
+                    epsilon=0.1,
+                    coef0=1
+                )
+        self.model_exists = True 
+        return self.model 
+    
+    def desision_tree_regressor(self, max_depth=5):  
         
         self.model = DecisionTreeRegressor(max_depth=max_depth)
         self.model.fit(self.x_train, self.y_train) 
@@ -604,7 +634,7 @@ class C_Dession_trees:
         self.model_exists = True
         return self.model#, self.accuracy
 
-    def Ada_Boost_Regressor(self, n_est = 100, Lr = 1.0):
+    def Ada_Boost_Regressor(self, n_est = 100, Lr = 0.1): 
         self.model = AdaBoostRegressor(n_estimators=100, learning_rate=1.0)
         self.model.fit(self.x_train, self.y_train) 
         self.y_pred = self.model.predict(self.x_test)
@@ -614,9 +644,9 @@ class C_Dession_trees:
 
     def random_forest_Regressor(self, n_est = 100):   
          #n_est =  number of trees in the forest.
-        self.model =  RandomForestRegressor(n_estimators = n_est)
+        self.model =  RandomForestRegressor(n_estimators = n_est) #bootstrapped = True default 
         self.model.fit(self.x_train, self.y_train) 
-        self.y_pred = self.model.predict(self.x_test)
+        self.y_pred = self.model.predict(self.x_test) 
 
         self.model_exists = True
         return self.model#, self.accuracy
@@ -666,7 +696,7 @@ class C_Dession_trees:
             return None
 
 class C_gen_alg:
-    def __init__(self, dataDict): 
+    def __init__(self, dataDict, n_gen = 10): 
         self.model = None
         self.model_exists = False 
         self.dataDict = dataDict 
@@ -674,7 +704,9 @@ class C_gen_alg:
         self.outPutPath = './data/ML/'
         self.score_file_path = None 
         #create the output dir if it does not exist
-        os.makedirs(self.outPutPath, exist_ok=True) 
+        os.makedirs(self.outPutPath, exist_ok=True)  
+        self.n_gen = n_gen
+        self.best_model_name = "missing" 
 
         #class_names = list(next(iter(dataDict.values()))[class_main_key].keys())
         #for i, name in enumerate(class_names): #for each class name
@@ -690,8 +722,7 @@ class C_gen_alg:
 
         n_feat = self.x_train.shape[1] 
         print(n_feat)  
-        n_gen= 10
-        best_chromo_x, best_score = self.generations(n_feat=n_feat, n_gen=n_gen) #size=5, n_parents=4, 
+        best_chromo_x, best_score = self.generations(n_feat=n_feat) #size=5, n_parents=4, 
         self.best_chromo_x_overall = max(zip(best_score, best_chromo_x), key=lambda x: x[0])[1]
  
         print("Best feature subset found:", np.where(self.best_chromo_x_overall)[0])
@@ -703,8 +734,10 @@ class C_gen_alg:
 
         with open(f'{self.score_file_path}', 'a') as f: 
             f.write(f"\n--- Generation alg ---\n") 
-            f.write(f"num genrations: {n_gen}\n")
+            f.write(f"num genrations: {self.n_gen}\n")
             f.write(f"Best feature subset found: {np.where(self.best_chromo_x_overall)[0]},\n Best feature names: {best_features},\n Corresponding R2: {best_score[0]}\n") 
+
+        self.plot_gen_accuracies(score=best_score, x=min(best_score), y=max(best_score))
         self.run_best_chromo_on_other_ML(features_key, class_main_key, class_name)
         #
     #func with the best_chromo_x_overall, run each ML model using the  best_chromo_x_overall
@@ -755,14 +788,15 @@ class C_gen_alg:
                 best_model_index = i   
     
         print(f"{model_obj.models_full[best_model_index]} highest accuracy of {max_cross_val_mean}.") 
+        self.best_model_name = model_obj.models_full[best_model_index]
         
         
-    def generations(self,n_feat,size=80,n_parents=64,mutation_rate=0.20,n_gen=5):
+    def generations(self,n_feat,size=80,n_parents=64,mutation_rate=0.20):
         print("Start generations")
         best_chromo_x= []
         best_score= [] 
         population_nextgen= self.initilization_of_population(size,n_feat)
-        for i in range(n_gen):
+        for i in range(self.n_gen): 
             scores, pop_after_fit = self.fitness_score(population_nextgen)  
             print('Best score in generation',i+1,':',scores[:1])  #2
             pop_after_sel = self.selection(pop_after_fit,n_parents)
@@ -839,12 +873,18 @@ class C_gen_alg:
             pop_next_gen.append(chromo)
         return pop_next_gen
         
-    def plot(score,x,y,c = "b"): #plot the generation accuracies. 
-        gen = [1,2,3,4,5]
+    def plot_gen_accuracies(self, score,x,y,c = "b"): #plot the generation accuracies. 
+        gen = list(range(1, self.n_gen + 1)) 
         plt.figure(figsize=(6,4))
         ax = sns.pointplot(x=gen, y=score,color = c )
         ax.set(xlabel="Generation", ylabel="R2") 
+        ax.set_title("Generation accuracies on best model")
         ax.set(ylim=(x,y)) 
+        plt.savefig(f'{self.outPutPath}_plot_gen_accuracies_{self.best_model_name}.png') 
+        plt.show()
+        plt.close() 
+        #save the plot
+         
 
 class C_PCA: 
     def __init__(self, dataDict, sort_key,  feature_key='Hs_Traits'): 
@@ -903,10 +943,6 @@ class C_PCA:
         plt.close() 
 
     
-    
-
-
-
 if __name__ == '__main__':    
     print("GO...")
     filenames = [
@@ -932,9 +968,10 @@ if __name__ == '__main__':
     sort_key = 'Conditions' 
     dictManager.write_dict_to_file(dataDict, "original") 
 
-    ga = C_gen_alg(dataDict)
+    ga = C_gen_alg(dataDict, n_gen = 10)  
     class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
     ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_names[0]) 
+ 
 
     """
     pca = C_PCA(dataDict, sort_key) 
@@ -955,10 +992,10 @@ if __name__ == '__main__':
    
     # Prepare data for covariance analysis on trait
     """
-    Analysis = C_analysis(df, dataDict)   
+    Analysis = C_analysis(df, dataDict)    
     Analysis.perform_covariance_analysis(filenames_keys[3])  
     Analysis.perform_covariance_analysis(filenames_keys[2])
-    """  
+   """
 
     """
     
