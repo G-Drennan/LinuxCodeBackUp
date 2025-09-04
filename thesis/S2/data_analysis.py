@@ -875,7 +875,7 @@ class C_gen_alg:
         ax.set(xlabel="Generation", ylabel="R2") 
         ax.set_title("Generation accuracies on best model")
         ax.set(ylim=(x,y)) 
-        plt.savefig(f'{self.outPutPath}_plot_gen_accuracies_{self.best_model_name}.png') 
+        plt.savefig(f'{self.outPutPath}plot_gen_accuracies_{self.best_model_name}.png') 
         plt.show()
         plt.close() 
         #save the plot
@@ -906,7 +906,22 @@ class C_PCA:
         os.makedirs(output_dir_csv, exist_ok=True)    
         self.df.to_csv(f'{output_dir_csv}pca_input_dataframe_{self.feature_key}_sort_by_{self.sort_term_name}.csv', index=False)
 
-    def plot_pca_clusters(self):
+    def plot_pcs_pairplot(self):
+        feature_cols = self.df.columns[2:].tolist()  # exclude ID and sort_key
+        label_col = self.sort_term_name 
+
+        sns.set_theme(style="ticks") 
+        pairplot = sns.pairplot(self.df, vars=feature_cols, hue=label_col, palette='tab10', diag_kind='hist')
+
+        pairplot.figure.suptitle(f'Pairplot of Features Colored by {label_col}', y=1.02) 
+        plt.tight_layout()
+
+        os.makedirs(self.output_dir, exist_ok=True)
+        pairplot.savefig(f'{self.output_dir}pairplot_features_{self.feature_key}_sort_by_{self.sort_term_name}.png')
+        plt.show()
+        plt.close()
+
+    def plot_pca_clusters(self): 
 
         #assume teh feature cols always exclude the first 2 and the rest are included
         feature_cols = self.df.columns[2:].tolist() 
@@ -962,19 +977,23 @@ if __name__ == '__main__':
     # Ploting spectra based off conditions
     sort_key = 'Conditions' 
     dictManager.write_dict_to_file(dataDict, "original") 
-
+    """
     ga = C_gen_alg(dataDict, n_gen = 20)   
     class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
     ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_names[0]) 
- 
-
-    """
-    pca = C_PCA(dataDict, sort_key) 
-    pca.plot_pca_clusters() 
-
-    pca = C_PCA(dataDict, sort_key, feature_key=filenames_keys[4])  
-    pca.plot_pca_clusters() 
     """ 
+
+
+    #pca = C_PCA(dataDict, sort_key) 
+    #pca.plot_pca_clusters() 
+
+    #pca = C_PCA(dataDict, sort_key, feature_key=filenames_keys[3])  
+    #pca.plot_pca_clusters() 
+
+
+    pca = C_PCA(dataDict, sort_key, feature_key=filenames_keys[2])  
+    pca.plot_pcs_pairplot()   
+
         
 
 
