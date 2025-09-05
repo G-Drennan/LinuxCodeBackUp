@@ -214,7 +214,6 @@ class C_Plot_Wavelenght_reflectance:
             count = {} 
             self.lables.append(key) 
 
-            #data in form of  'Spectra': {'450': 0.055956043, '451': 0.056224021, '452': 0.056229805, '453': 0.056243247, '454': 0.056340493, '455': 0.056314658, '456': 0.056342624, ect
             wavelength_accumulator = defaultdict(list) 
             for entry in entries.values(): 
                 for wl_str, refl in entry[dict_key].items():
@@ -237,8 +236,7 @@ class C_Plot_Wavelenght_reflectance:
         self.group_lot_wavelengths_reflectance(sort_key)  
 
     def group_lot_wavelengths_reflectance(self, sort_key):
-        # plot each entry on the same plot, with different colors for each entry
-        # Ensure the output directory exists
+ 
         output_dir = './data/figures/reflectance_v_wavelength/'
         os.makedirs(output_dir, exist_ok=True)
         plt.figure()
@@ -279,19 +277,15 @@ class C_Plot_Wavelenght_reflectance:
         plt.title(f"{lable}")
         plt.xlabel(x_label)
         plt.ylabel(y_label)
-        #reduce the number of ticks on the x axis
         plt.xticks(np.arange(0, len(x_points), len(x_points)/10), fontsize=8)
         plt.grid(True) 
 
         # Plot with std
         print(f"{lable}: min {min_vals} max: {max_vals}") 
         #print(f"Reflectance:{reflectance}")  
-        # Plot the data 
         line, = plt.plot(x_points, y_points)  
         plt.fill_between(wavelenghts, min_vals, max_vals, color = line.get_color(), alpha=0.3)         
 
-
-        #save plot as a png file
         plt.savefig(f'{output_dir}{lable}_wavelenght_reflectance_plot.png')
         plt.show() 
     
@@ -424,7 +418,6 @@ class C_Test_train_split:
 
         self.condition_distribution()
 
-        #prove that the split is stratified
         print("Training set size:", len(self.x_train), "Test set size:", len(self.x_test))
         self.training_sets_made = True  
 
@@ -663,21 +656,15 @@ class C_Dession_trees:
         return self.model#, self.accuracy
     
     def my_accuracy_score(self): 
-        #accuracy = np.mean(y_pred == self.y_test)
-        #score = self.model.score(self.x_test, self.y_test) 
-
         mse = mean_squared_error(self.y_test, self.y_pred)
         r2 = r2_score(self.y_test, self.y_pred)
 
-        #F value F1 = 2 * (precision * recall) / (precision + recall
         return r2, mse 
     
     #Cross-validation test the models performance. 
     def cross_val(self, model = None, n_splits=10):
         if self.model_exists and model == None: 
             scores = cross_val_score(self.model, self.x_train, self.y_train, cv=n_splits) #CV no. folds 
-            #returnes scores: ndarray of float of shape=(len(list(cv)),)
-            #Array of scores of the estimator for each run of the cross validation.
             cross_val_mean = scores.mean()
         elif model!= None:
             scores = cross_val_score(model, self.x_train, self.y_train, cv=n_splits, scoring='r2') 
@@ -719,9 +706,6 @@ class C_gen_alg:
         self.n_gen = n_gen
         self.best_model_name = "missing" 
 
-        #class_names = list(next(iter(dataDict.values()))[class_main_key].keys())
-        #for i, name in enumerate(class_names): #for each class name
-
     def gen_alg_on_best_model(self, features_key, class_main_key, class_name):
         print(f"run prediction on {class_main_key} : {class_name}")  
         
@@ -740,7 +724,7 @@ class C_gen_alg:
         self.best_chromo_x_overall = max(zip(best_score, best_chromo_x), key=lambda x: x[0])[1]
  
         print("Best feature subset found:", np.where(self.best_chromo_x_overall)[0])
-        #translate the best chromo to the feature names
+
         self.feature_names = np.array(self.tnt.extract_features(features_key)[1])
         best_features = self.feature_names[self.best_chromo_x_overall]
         print("Best feature names:", best_features)
@@ -754,8 +738,7 @@ class C_gen_alg:
 
         self.plot_gen_accuracies(score=best_score, x=min(best_score), y=max(best_score), class_name=class_name)
         self.run_best_chromo_on_other_ML(features_key, class_main_key, class_name) 
-        #
-    #func with the best_chromo_x_overall, run each ML model using the  best_chromo_x_overall
+
     def run_best_chromo_on_other_ML(self, features_key, class_main_key, class_name): 
         
         selected_indices = np.where(self.best_chromo_x_overall)[0]
@@ -830,8 +813,6 @@ class C_gen_alg:
         print("fitness_score")
         scores = []
         for chromosome in population:  
-            #model is the curretn model.   
-            #model = RandomForestClassifier(n_estimators=200, random_state=0)
             selected_features = np.where(chromosome)[0]
             self.model.fit(self.x_train[:, selected_features], self.y_train)
             scores.append(self.retrive_score(chromosome, use_cross_val))   
@@ -1039,125 +1020,3 @@ if __name__ == '__main__':
 
 
    
-     
-
-#~~~~~~~~~~~~~~~~~~~~~ junk code ~~~~~~~~~~~~~~~~~~~~~~~
-
- 
-
-    """
-    model = C_PCA(dataDict) 
-    model.extract_features(keys=('Traits', 'Hs_Traits', 'Spectra')) 
-    pca_output = model.run_pca(n_components=3)
-    print("Explained variance:", model.explained_variance())
-    model.plot_pca(metadata_key='Conditions') 
-    """  
-
-    #print("Trait name: ", trait_keys)  
-    """
-    pca = C_PCA(dataDict)
-    x, keys = pca.extract_features(filenames_keys[4])
-    y, trait_key = pca.extract_class(filenames_keys[2], trait_keys[2])
-    print(x) 
-    print(y)  
-    pca.plot_pca(x,y) """
-    #print(keys, x)   
-
-
-
-    """
-    output_dir = './data/pca/'
-    os.makedirs(output_dir, exist_ok=True)  
-    np.savetxt(f'{output_dir}pca_features.txt', x, delimiter=',', header=','.join(keys), comments='') 
-    print(keys, x) """ 
-    
-
-    """
-    dictManager = C_Dict_manager(dataDict)  
-    dictManager.write_dict_to_file(dataDict, 'data') 
-    """
-
-
-  
-    """
-    
-    def plot_svr_basic(self, svr, lable):
-        # Fit on training data
-        svr.fit(self.x_train, self.y_train) 
-
-        # Generate predictions
-        y_pred_train = svr.predict(self.x_train)
-        y_pred_test  = svr.predict(self.x_test)
-
-         # Prepare figure
-        fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharex=False, sharey=False)
-
-        # Loop over train/test splits
-        for ax, y_true, y_pred, split in zip(
-                axes,
-                (self.y_train,    self.y_test),
-                (y_pred_train, y_pred_test),
-                ("Train",    "Test")
-        ):
-                # Scatter actual vs. predicted
-            ax.scatter(y_true, y_pred, alpha=0.7, edgecolor="k", s=50)
-                
-                # Plot 1:1 line
-            min_val = min(np.min(y_true), np.min(y_pred))
-            max_val = max(np.max(y_true), np.max(y_pred))
-            ax.plot([min_val, max_val], [min_val, max_val], 'r--', lw=1)
-
-            # Compute metrics
-            r2  = r2_score(y_true, y_pred)
-            mse = mean_squared_error(y_true, y_pred)
-
-                # Annotate
-            ax.text(
-                    0.05, 0.95,
-                    f"$R^2$ = {r2:.3f}\nMSE = {mse:.3e}",
-                    transform=ax.transAxes,
-                    va="top",
-                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8)
-            )
-
-            # Labels & title
-            ax.set_xlabel("Actual")
-            ax.set_ylabel("Predicted")
-            ax.set_title(f"{split} Set {lable}") 
-
-        fig.suptitle("SVR Performance", fontsize=14)
-        fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-        plt.show()
-
-
-     
-    #"""   
-
-"""
-class C_PCA:
-    
-    def plot_pca(self, X, y=None, n_components=2):
-        # Standardize the data
-        X_scaled = StandardScaler().fit_transform(X)
-
-        # Run PCA
-        pca = PCA(n_components=n_components)
-        X_pca = pca.fit_transform(X_scaled)
-
-        # Plot the first two principal components
-        plt.figure(figsize=(8, 6))
-        if y is not None:
-            for label in set(y):
-                idx = y == label
-                plt.scatter(X_pca[idx, 0], X_pca[idx, 1], label=f"Class {label}", alpha=0.6)
-            plt.legend()
-        else:
-            plt.scatter(X_pca[:, 0], X_pca[:, 1], alpha=0.6)
-
-        plt.xlabel(f"PC1 ({pca.explained_variance_ratio_[0]*100:.1f}% variance)")
-        plt.ylabel(f"PC2 ({pca.explained_variance_ratio_[1]*100:.1f}% variance)")
-        plt.title("PCA: First Two Principal Components")
-        plt.grid(True)
-        plt.tight_layout()
-        plt.show()
-"""
