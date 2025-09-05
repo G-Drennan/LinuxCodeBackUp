@@ -343,24 +343,35 @@ class C_analysis:
         print(f"Covariance matrix saved to {self.output_dir_covariance}covariance_matrix_{filenames_key}.png")
 
     def perform_covariance_analysis_two_diff_data_sets(self, filenames_key_1, filenames_key_2,  normalise = True):
-        filenames_key_1 = list(next(iter(self.init_dict.values()))[filenames_key_1].keys())
-        samples_1 = []
-        for entry in self.init_dict.values():
-            samples_1.append([entry[filenames_key_1][trait] for trait in filenames_key_1])
+        traits_1 = list(next(iter(self.init_dict.values()))[filenames_key_1].keys())
+        traits_2 = list(next(iter(self.init_dict.values()))[filenames_key_2].keys())
 
-        filenames_key_2 = list(next(iter(self.init_dict.values()))[filenames_key_2].keys())
-        samples_2 = []
-        for entry in self.init_dict.values():
-            samples_2.append([entry[filenames_key_2][trait] for trait in filenames_key_2])
-        
-        #One side of the covariance matrix is one data set the other the otehr data set
+        #print(traits_1, traits_2)
+
+        samples_1 = [
+            [entry[filenames_key_1][trait] for trait in traits_1]
+            for entry in self.init_dict.values()
+        ]
+
+        samples_2 = [
+            [entry[filenames_key_2][trait] for trait in traits_2]
+            for entry in self.init_dict.values()
+        ]
+
         combined_samples = np.hstack((samples_1, samples_2))
+
+
          #normalise both samples
         if normalise:
             scaler = StandardScaler()
             combined_samples = scaler.fit_transform(combined_samples) 
         
-        combined_features = filenames_key_1 + filenames_key_2
+        combined_features = []
+        combined_features.append(traits_1)
+        combined_features.append(traits_2)
+        combined_features = [item for sublist in combined_features for item in sublist]
+        print(combined_features)  
+
 
         cov = EmpiricalCovariance().fit(combined_samples)
         sns.heatmap(
@@ -540,7 +551,7 @@ class C_svr:
         lable = features_key 
         fig.suptitle(f"SVR Test Set Performance for All Traits using {lable} as features", fontsize=16)
         fig.tight_layout(rect=[0, 0.03, 1, 0.95]) 
-        fig_path = f"{output_dir}svr_all_traits_{lable}.png"
+        fig_path = f"{output_dir}svr_all_traits_{lable}.png" 
         fig.savefig(fig_path) 
         print(f"Figure saved to: {fig_path}")
         plt.show() 
@@ -549,7 +560,7 @@ class C_svr:
  
 
 class C_Dession_trees:
-    def __init__(self, dataDict, x_train, x_test, y_train, y_test):
+    def __init__(self, x_train, x_test, y_train, y_test): 
         
         self.x_train = x_train
         self.x_test = x_test
@@ -564,7 +575,7 @@ class C_Dession_trees:
         self.model_exists = False 
         self.y_pred = None 
 
-    def train_model(self, features_key, class_main_key, class_name, model = "RF"): # features_name,
+    def train_model(self, class_name, model = "RF"): # features_name,
   
         print(f"{class_name}: Training {model} model")  
         if model == "RF": 
@@ -704,19 +715,21 @@ class C_gen_alg:
         self.outPutPath = './data/ML/'
         self.score_file_path = None 
         #create the output dir if it does not exist
-        os.makedirs(self.outPutPath, exist_ok=True)  
+        os.makedirs(self.outPutPath, exist_ok=True)   
         self.n_gen = n_gen
         self.best_model_name = "missing" 
 
         #class_names = list(next(iter(dataDict.values()))[class_main_key].keys())
         #for i, name in enumerate(class_names): #for each class name
-    
+
     def gen_alg_on_best_model(self, features_key, class_main_key, class_name):
+        print(f"run prediction on {class_main_key} : {class_name}")  
+        
         #chromo_df_bc,score_bc=generations(data_bc,label_bc)
-        self.score_file_path = os.path.join(self.outPutPath, f'model_scores_{features_key}.txt')        #create the file 
+        self.score_file_path = os.path.join(self.outPutPath, f'model_scores_Feature_{features_key}_predit_{class_name}.txt')        #create the file  
         #whipe the file if it exists
         with open(f'{self.score_file_path}', 'w') as f:
-            f.write(f"--- Model scores for features: {features_key} ---\n") 
+            f.write(f"--- Model scores for features: {features_key} ---\n")  
         
         self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key  = self.tnt.make_training_n_test_sets(features_key, class_main_key, class_name) 
         self.find_best_model(features_key, class_main_key, class_name)
@@ -735,11 +748,12 @@ class C_gen_alg:
 
         with open(f'{self.score_file_path}', 'a') as f: 
             f.write(f"\n--- Generation alg ---\n") 
+            f.write(f"Predicting: {class_main_key} : {class_name}") 
             f.write(f"num genrations: {self.n_gen}\n")
             f.write(f"Best feature subset found: {np.where(self.best_chromo_x_overall)[0]},\n Best feature names: {best_features},\n Corresponding R2: {best_score[0]}\n") 
 
-        self.plot_gen_accuracies(score=best_score, x=min(best_score), y=max(best_score))
-        self.run_best_chromo_on_other_ML(features_key, class_main_key, class_name)
+        self.plot_gen_accuracies(score=best_score, x=min(best_score), y=max(best_score), class_name=class_name)
+        self.run_best_chromo_on_other_ML(features_key, class_main_key, class_name) 
         #
     #func with the best_chromo_x_overall, run each ML model using the  best_chromo_x_overall
     def run_best_chromo_on_other_ML(self, features_key, class_main_key, class_name): 
@@ -752,13 +766,13 @@ class C_gen_alg:
         self.x_test = self.x_test[:, selected_indices]  
 
         # Train and evaluate all models on selected features
-        model_obj = C_Dession_trees(self.dataDict, self.x_train, self.x_test, self.y_train, self.y_test)
+        model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test)
         with open(f'{self.score_file_path}', 'a') as f: 
             f.write("\n--- Performance on Best Chromosome Feature Subset ---\n")
             f.write(f"Selected Features: {selected_features.tolist()}\n")
 
             for i, model in enumerate(model_obj.models):
-                model, r2_score, cross_val_mean = model_obj.train_model(features_key, class_main_key, class_name, model)
+                model, r2_score, cross_val_mean = model_obj.train_model(class_name, model)
                 f.write(f"{model_obj.models_full[i]}: R2={r2_score:.2f}, Cross-val mean={cross_val_mean:.2f}\n")
 
         print("Finished evaluating all models on best feature subset.")  
@@ -767,11 +781,11 @@ class C_gen_alg:
     def find_best_model(self, features_key, class_main_key, name):  
         max_cross_val_mean = 0
 
-        model_obj = C_Dession_trees(dataDict, self.x_train, self.x_test, self.y_train, self.y_test) 
+        model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test) 
         for i, model in enumerate(model_obj.models): #        self.models = ["RF", "AB", "GB", "DT"]
  
             #genetic feature selection, save best features from first run use for other runs for consistencey and comparision. 
-            model, r2_score, cross_val_mean  = model_obj.train_model(features_key, class_main_key, name, model)
+            model, r2_score, cross_val_mean  = model_obj.train_model(name, model)
             #write the model and its score to a file
             with open(f'{self.score_file_path}', 'a') as f:  
                 f.write(f"{model_obj.models_full[i]}: R2={r2_score:.2f}, Cross-val mean={cross_val_mean:.2f}\n")
@@ -868,14 +882,14 @@ class C_gen_alg:
             pop_next_gen.append(chromo)
         return pop_next_gen
         
-    def plot_gen_accuracies(self, score,x,y,c = "b"): #plot the generation accuracies. 
+    def plot_gen_accuracies(self, score,x,y,class_name,c = "b"): #plot the generation accuracies. 
         gen = list(range(1, self.n_gen + 1)) 
         plt.figure(figsize=(6,4))
         ax = sns.pointplot(x=gen, y=score,color = c )
         ax.set(xlabel="Generation", ylabel="R2") 
-        ax.set_title("Generation accuracies on best model")
+        ax.set_title(f"Generation accuracies on best model to predict {class_name}")  
         ax.set(ylim=(x,y)) 
-        plt.savefig(f'{self.outPutPath}plot_gen_accuracies_{self.best_model_name}.png') 
+        plt.savefig(f'{self.outPutPath}plot_gen_accuracies_{self.best_model_name}_predict_{class_name}.png') 
         plt.show()
         plt.close() 
         #save the plot
@@ -977,11 +991,16 @@ if __name__ == '__main__':
     # Ploting spectra based off conditions
     sort_key = 'Conditions' 
     dictManager.write_dict_to_file(dataDict, "original") 
-    """
-    ga = C_gen_alg(dataDict, n_gen = 20)   
+
+    ga = C_gen_alg(dataDict, n_gen = 15)   
     class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
-    ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_names[0]) 
-    """ 
+    print(class_names)
+    class_names = [f for f in class_names if 'Leaf' not in f]
+    print(class_names) #remove leaf from traits.  
+
+    for class_name in class_names: 
+        ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting 
+
 
 
     #pca = C_PCA(dataDict, sort_key) 
@@ -990,26 +1009,24 @@ if __name__ == '__main__':
     #pca = C_PCA(dataDict, sort_key, feature_key=filenames_keys[3])  
     #pca.plot_pca_clusters() 
 
-
+    """
     pca = C_PCA(dataDict, sort_key, feature_key=filenames_keys[2])  
     pca.plot_pcs_pairplot()   
-
+    """
         
-
-
-
     """
     reg = C_svr(dataDict)  
     reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2]) 
     #reg.plot_svr_all_features(filenames_keys[4], filenames_keys[2])  #spectra takes too long
-    """   
+    """ 
    
     # Prepare data for covariance analysis on trait
     """
     Analysis = C_analysis(df, dataDict)    
-    Analysis.perform_covariance_analysis(filenames_keys[3])  
-    Analysis.perform_covariance_analysis(filenames_keys[2])
-   """
+    Analysis.perform_covariance_analysis_two_diff_data_sets(filenames_keys[2],filenames_keys[3]) 
+    #Analysis.perform_covariance_analysis(filenames_keys[3])  
+    #Analysis.perform_covariance_analysis(filenames_keys[2])
+    """
 
     """
     

@@ -1,0 +1,22 @@
+--- Model scores for features: Hs_Traits ---
+Random Forest: R2=0.17, Cross-val mean=0.15
+Ada Boost: R2=0.05, Cross-val mean=0.06
+Gradient Boosting: R2=0.12, Cross-val mean=0.18
+Decision Tree: R2=0.08, Cross-val mean=-0.05
+Support Vector Machine polymonial: R2=0.08, Cross-val mean=0.15
+
+--- Generation alg ---
+Predicting: Traits : Phosphorusnum genrations: 15
+Best feature subset found: [ 5  6 11 12 14 16],
+ Best feature names: ['Nitrogen Related Index NRI850' 'Disease Water Stress Index 1'
+ 'Chlorophyll content' 'Water Band Index'
+ 'Green Difference Vegetation Index' 'Leaf Area Index'],
+ Corresponding R2: 0.18345760682822243
+
+--- Performance on Best Chromosome Feature Subset ---
+Selected Features: ['Nitrogen Related Index NRI850', 'Disease Water Stress Index 1', 'Chlorophyll content', 'Water Band Index', 'Green Difference Vegetation Index', 'Leaf Area Index']
+Random Forest: R2=0.14, Cross-val mean=0.10
+Ada Boost: R2=0.01, Cross-val mean=-0.10
+Gradient Boosting: R2=0.11, Cross-val mean=0.10
+Decision Tree: R2=-0.11, Cross-val mean=-0.13
+Support Vector Machine polymonial: R2=-0.11, Cross-val mean=0.09

@@ -1,0 +1,25 @@
+--- Model scores for features: Hs_Traits ---
+Random Forest: R2=0.71, Cross-val mean=0.67
+Ada Boost: R2=0.66, Cross-val mean=0.62
+Gradient Boosting: R2=0.69, Cross-val mean=0.66
+Decision Tree: R2=0.62, Cross-val mean=0.56
+Support Vector Machine polymonial: R2=0.62, Cross-val mean=0.68
+
+--- Generation alg ---
+Predicting: Traits : Nitrogennum genrations: 15
+Best feature subset found: [ 0  3  4  5  6 10 11 12 15 17],
+ Best feature names: ['Leaf Structure Index' 'Cellulose Absorption Index'
+ 'Nitrogen Related Index NRI1510' 'Nitrogen Related Index NRI850'
+ 'Disease Water Stress Index 1' 'Disease Water Stress Index 5'
+ 'Chlorophyll content' 'Water Band Index'
+ 'Normalized Difference Vegetation Index1'
+ 'Infrared Percentage Vegetation Index'],
+ Corresponding R2: 0.7517397311486722
+
+--- Performance on Best Chromosome Feature Subset ---
+Selected Features: ['Leaf Structure Index', 'Cellulose Absorption Index', 'Nitrogen Related Index NRI1510', 'Nitrogen Related Index NRI850', 'Disease Water Stress Index 1', 'Disease Water Stress Index 5', 'Chlorophyll content', 'Water Band Index', 'Normalized Difference Vegetation Index1', 'Infrared Percentage Vegetation Index']
+Random Forest: R2=0.71, Cross-val mean=0.64
+Ada Boost: R2=0.65, Cross-val mean=0.57
+Gradient Boosting: R2=0.70, Cross-val mean=0.65
+Decision Tree: R2=0.56, Cross-val mean=0.52
+Support Vector Machine polymonial: R2=0.56, Cross-val mean=0.68

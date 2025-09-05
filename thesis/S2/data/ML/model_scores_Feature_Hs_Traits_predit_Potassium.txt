@@ -1,0 +1,24 @@
+--- Model scores for features: Hs_Traits ---
+Random Forest: R2=0.19, Cross-val mean=0.17
+Ada Boost: R2=0.09, Cross-val mean=0.15
+Gradient Boosting: R2=0.19, Cross-val mean=0.18
+Decision Tree: R2=0.05, Cross-val mean=0.01
+Support Vector Machine polymonial: R2=0.05, Cross-val mean=0.18
+
+--- Generation alg ---
+Predicting: Traits : Potassiumnum genrations: 15
+Best feature subset found: [ 0  1  2  3  7  8 11 12 16 17 18],
+ Best feature names: ['Leaf Structure Index' 'Chlorophyll index' 'Water index'
+ 'Cellulose Absorption Index' 'Disease Water Stress Index 2'
+ 'Disease Water Stress Index 3' 'Chlorophyll content' 'Water Band Index'
+ 'Leaf Area Index' 'Infrared Percentage Vegetation Index'
+ 'Enhanced Vegetation Index'],
+ Corresponding R2: 0.21269580821718725
+
+--- Performance on Best Chromosome Feature Subset ---
+Selected Features: ['Leaf Structure Index', 'Chlorophyll index', 'Water index', 'Cellulose Absorption Index', 'Disease Water Stress Index 2', 'Disease Water Stress Index 3', 'Chlorophyll content', 'Water Band Index', 'Leaf Area Index', 'Infrared Percentage Vegetation Index', 'Enhanced Vegetation Index']
+Random Forest: R2=0.19, Cross-val mean=0.17
+Ada Boost: R2=0.07, Cross-val mean=0.11
+Gradient Boosting: R2=0.18, Cross-val mean=0.16
+Decision Tree: R2=-0.05, Cross-val mean=-0.05
+Support Vector Machine polymonial: R2=-0.05, Cross-val mean=0.20
