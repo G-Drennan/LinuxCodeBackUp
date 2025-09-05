@@ -991,7 +991,7 @@ if __name__ == '__main__':
     # Ploting spectra based off conditions
     sort_key = 'Conditions' 
     dictManager.write_dict_to_file(dataDict, "original") 
-
+    """
     ga = C_gen_alg(dataDict, n_gen = 15)   
     class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
     print(class_names)
@@ -1001,7 +1001,7 @@ if __name__ == '__main__':
     for class_name in class_names: 
         ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting 
 
-
+    """ 
 
     #pca = C_PCA(dataDict, sort_key) 
     #pca.plot_pca_clusters() 
@@ -1009,10 +1009,10 @@ if __name__ == '__main__':
     #pca = C_PCA(dataDict, sort_key, feature_key=filenames_keys[3])  
     #pca.plot_pca_clusters() 
 
-    """
+
     pca = C_PCA(dataDict, sort_key, feature_key=filenames_keys[2])  
-    pca.plot_pcs_pairplot()   
-    """
+    pca.plot_pca_clusters()     
+
         
     """
     reg = C_svr(dataDict)  
