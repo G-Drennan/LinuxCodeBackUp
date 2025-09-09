@@ -987,12 +987,8 @@ if __name__ == '__main__':
     #pca = C_PCA(dataDict, sort_key) 
     #pca.plot_pca_clusters() 
 
-    #pca = C_PCA(dataDict, sort_key, feature_key=filenames_keys[3])  
-    #pca.plot_pca_clusters() 
-
-
-    pca = C_PCA(dataDict, sort_key, feature_key=filenames_keys[2])  
-    pca.plot_pca_clusters()     
+    pca = C_PCA(dataDict, sort_key, feature_key=filenames_keys[3])  
+    pca.plot_pcs_pairplot()      
 
         
     """
