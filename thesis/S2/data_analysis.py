@@ -473,7 +473,7 @@ class C_svr:
 
         self.tnt = C_Test_train_split(dataDict)
 
-    def get_svr_kernal(self, kernalType = "poly"):
+    def get_svr_kernal(self, kernalType = "poly"):  
         self.srv_exists = True
         if kernalType == "rbf":
             return SVR(kernel=kernalType, C=100, gamma=0.1, epsilon=0.1)
@@ -492,7 +492,7 @@ class C_svr:
             self.srv_exists = False
             raise ValueError(f"Unsupported kernel: {kernalType!r}")
 
-    def plot_svr_all_features(self, features_key, class_main_key): 
+    def plot_svr_all_features(self, features_key, class_main_key, kernalType = "poly"): 
         print("Start new set of srv.") 
 
         class_names = list(next(iter(dataDict.values()))[class_main_key].keys())
@@ -509,7 +509,7 @@ class C_svr:
         for i, name in enumerate(class_names):  
             print(name)
             self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key    = self.tnt.make_training_n_test_sets(features_key, class_main_key, name) 
-            svr = self.get_svr_kernal("linear") 
+            svr = self.get_svr_kernal(kernalType) 
             svr.fit(self.x_train, self.y_train) 
             y_pred_test = svr.predict(self.x_test)
             ax = axes[i] 
@@ -542,11 +542,11 @@ class C_svr:
             fig.delaxes(axes[j])
 
         lable = features_key 
-        fig.suptitle(f"SVR Test Set Performance for All Traits using {lable} as features", fontsize=16)
+        fig.suptitle(f"SVR {kernalType} Test Set Performance for All Traits using {lable} as features", fontsize=16)
         fig.tight_layout(rect=[0, 0.03, 1, 0.95]) 
-        fig_path = f"{output_dir}svr_all_traits_{lable}.png" 
+        fig_path = f"{output_dir}svr_all_traits_{lable}_{kernalType}.png" 
         fig.savefig(fig_path) 
-        print(f"Figure saved to: {fig_path}")
+        print(f"Figure saved to: {fig_path}")  
         plt.show() 
         plt.close('all') 
         plt.clf()  
@@ -616,7 +616,7 @@ class C_Dession_trees:
                     gamma="auto",
                     degree=3,
                     epsilon=0.1,
-                    coef0=1
+                    coef0=1 
                 )
         self.model_exists = True 
         return self.model 
@@ -736,7 +736,7 @@ class C_gen_alg:
             f.write(f"num genrations: {self.n_gen}\n")
             f.write(f"Best feature subset found: {np.where(self.best_chromo_x_overall)[0]},\n Best feature names: {best_features},\n Corresponding R2: {best_score[0]}\n") 
 
-        self.plot_gen_accuracies(score=best_score, x=min(best_score), y=max(best_score), class_name=class_name)
+        #self.plot_gen_accuracies(score=best_score, x=min(best_score), y=max(best_score), class_name=class_name) #not required. 
         self.run_best_chromo_on_other_ML(features_key, class_main_key, class_name) 
 
     def run_best_chromo_on_other_ML(self, features_key, class_main_key, class_name): 
@@ -961,7 +961,7 @@ if __name__ == '__main__':
         'ID', 
         'Metadata', 
         'Traits',
-        'Hs_Traits',
+        'HSVI_Traits',
         'Spectra'
     ] 
      
@@ -981,38 +981,32 @@ if __name__ == '__main__':
 
     for class_name in class_names: 
         ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting 
-
     """ 
 
     #pca = C_PCA(dataDict, sort_key) 
     #pca.plot_pca_clusters() 
 
-    pca = C_PCA(dataDict, sort_key, feature_key=filenames_keys[3])  
-    pca.plot_pcs_pairplot()      
+    #pca = C_PCA(dataDict, sort_key, feature_key=filenames_keys[3])  
+    #pca.plot_pcs_pairplot() 
+    #pca.plot_pca_clusters()       
 
-        
-    """
-    reg = C_svr(dataDict)  
-    reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2]) 
+    #reg = C_svr(dataDict)  
+    #reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2], kernalType='linear') 
+    #reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2], kernalType='poly')     
     #reg.plot_svr_all_features(filenames_keys[4], filenames_keys[2])  #spectra takes too long
-    """ 
+  
    
     # Prepare data for covariance analysis on trait
-    """
-    Analysis = C_analysis(df, dataDict)    
-    Analysis.perform_covariance_analysis_two_diff_data_sets(filenames_keys[2],filenames_keys[3]) 
+
+    #Analysis = C_analysis(df, dataDict)    
+    #Analysis.perform_covariance_analysis_two_diff_data_sets(filenames_keys[2],filenames_keys[3]) 
     #Analysis.perform_covariance_analysis(filenames_keys[3])  
     #Analysis.perform_covariance_analysis(filenames_keys[2])
-    """
 
     """
-    
-
+    dataDictSort = dictManager.separate_dict_by_value(sort_key) 
     #for each entry to dataDictSort extract its wavelenght and reflectance to plot 
     plotWR = C_Plot_Wavelenght_reflectance(dataDictSort)     
     plotWR.plot_dict_wavelenghts(sort_key, filenames_keys[4]) #group the wavelengths and reflectance by lables
+    """ 
     
-    """
-
-
-   
