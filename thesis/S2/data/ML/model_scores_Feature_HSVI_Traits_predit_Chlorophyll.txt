@@ -1,0 +1,25 @@
+--- Model scores for features: HSVI_Traits ---
+Random Forest: R2=0.93, Cross-val mean=0.91
+Ada Boost: R2=0.90, Cross-val mean=0.88
+Gradient Boosting: R2=0.93, Cross-val mean=0.91
+Decision Tree: R2=0.86, Cross-val mean=0.82
+Support Vector Machine linear: R2=0.86, Cross-val mean=0.92
+Support Vector Machine polymonial: R2=0.86, Cross-val mean=0.88
+
+Support Vector Machine linear highest accuracy of 0.9169780752262426.
+
+--- Generation alg ---
+Predicting: Traits : Chlorophyllnum genrations: 15
+Best feature subset found: [ 0  2  3  4  5  8  9 10 12 13 14 15 17 18 19 20 23],
+ Best feature names: ['LSI' 'WI' 'CAI' 'NRI1510' 'NRI850' 'DWSI3' 'DWSI4' 'DWSI5' 'WBI' 'RDVI'
+ 'GDVI' 'NDVI1' 'IPVI' 'EVI' 'GNDVI' 'RENDVI' 'NDLI'],
+ Corresponding R2: 0.937012222813638
+
+--- Performance on Best Chromosome Feature Subset ---
+Selected Features: ['LSI', 'WI', 'CAI', 'NRI1510', 'NRI850', 'DWSI3', 'DWSI4', 'DWSI5', 'WBI', 'RDVI', 'GDVI', 'NDVI1', 'IPVI', 'EVI', 'GNDVI', 'RENDVI', 'NDLI']
+Random Forest: R2=0.92, Cross-val mean=0.90
+Ada Boost: R2=0.89, Cross-val mean=0.88
+Gradient Boosting: R2=0.92, Cross-val mean=0.90
+Decision Tree: R2=0.86, Cross-val mean=0.83
+Support Vector Machine linear: R2=0.86, Cross-val mean=0.90
+Support Vector Machine polymonial: R2=0.86, Cross-val mean=0.85

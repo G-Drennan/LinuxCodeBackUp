@@ -561,7 +561,7 @@ class C_Dession_trees:
         self.y_test = y_test 
         
 
-        self.models = ["RF", "AB", "GB", "DT", "svr_linear"] 
+        self.models = ["RF", "AB", "GB", "DT", "svr_linear", "svr_poly"]   
         self.models_full = ["Random Forest", "Ada Boost", "Gradient Boosting", "Decision Tree", "Support Vector Machine polymonial", "Support Vector Machine linear"]  
         self.models_dict = {"RF":"Random Forest", "AB":"Ada Boost", "GB":"Gradient Boosting", "DT":"Decision Tree", "svr_linear": "Support Vector Machine linear", "svr_poly": "Support Vector Machine polymonial"} 
         self.model = None #model  
@@ -754,9 +754,9 @@ class C_gen_alg:
             f.write("\n--- Performance on Best Chromosome Feature Subset ---\n")
             f.write(f"Selected Features: {selected_features.tolist()}\n")
 
-            for i, model in enumerate(model_obj.models):
-                model, r2_score, cross_val_mean = model_obj.train_model(class_name, model)
-                f.write(f"{model_obj.models_full[i]}: R2={r2_score:.2f}, Cross-val mean={cross_val_mean:.2f}\n")
+            for i, model_name in enumerate(model_obj.models): 
+                model, r2_score, cross_val_mean = model_obj.train_model(class_name, model_name) 
+                f.write(f"{model_obj.models_dict[model_name]}: R2={r2_score:.2f}, Cross-val mean={cross_val_mean:.2f}\n")
 
         print("Finished evaluating all models on best feature subset.")  
 
@@ -765,22 +765,25 @@ class C_gen_alg:
         max_cross_val_mean = 0
 
         model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test) 
-        for i, model in enumerate(model_obj.models): #        self.models = ["RF", "AB", "GB", "DT"]
+        for i, model_name in enumerate(model_obj.models): #        self.models = ["RF", "AB", "GB", "DT"]
  
             #genetic feature selection, save best features from first run use for other runs for consistencey and comparision. 
-            model, r2_score, cross_val_mean  = model_obj.train_model(name, model)
+            model, r2_score, cross_val_mean  = model_obj.train_model(name, model_name)
             #write the model and its score to a file
             with open(f'{self.score_file_path}', 'a') as f:  
-                f.write(f"{model_obj.models_full[i]}: R2={r2_score:.2f}, Cross-val mean={cross_val_mean:.2f}\n")
+                f.write(f"{model_obj.models_dict[model_name]}: R2={r2_score:.2f}, Cross-val mean={cross_val_mean:.2f}\n")
 
-            if cross_val_mean > max_cross_val_mean : 
+            if cross_val_mean > max_cross_val_mean : #use cross_val_mean to find best model 
+                print(f"best model is currently {model_name}") 
                 max_cross_val_mean = cross_val_mean
                 self.model = model
                 self.model_exists = True  
-                best_model_index = i   
-    
-        print(f"{model_obj.models_full[best_model_index]} highest accuracy of {max_cross_val_mean}.") 
-        self.best_model_name = model_obj.models_full[best_model_index]
+                best_model_name = model_name    
+     
+        print(f"{model_obj.models_dict[best_model_name]} highest accuracy of {max_cross_val_mean}.") 
+        with open(f'{self.score_file_path}', 'a') as f: 
+            f.write(f"\n{model_obj.models_dict[best_model_name]} highest accuracy of {max_cross_val_mean}.\n")  
+        self.best_model_name = model_obj.models_dict[best_model_name] 
         
         
     def generations(self,n_feat,size=80,n_parents=64,mutation_rate=0.20):
@@ -972,8 +975,8 @@ if __name__ == '__main__':
     # Ploting spectra based off conditions
     sort_key = 'Conditions' 
     dictManager.write_dict_to_file(dataDict, "original") 
-    """
-    ga = C_gen_alg(dataDict, n_gen = 15)   
+    
+    ga = C_gen_alg(dataDict, n_gen = 15)     
     class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
     print(class_names)
     class_names = [f for f in class_names if 'Leaf' not in f]
@@ -981,7 +984,7 @@ if __name__ == '__main__':
 
     for class_name in class_names: 
         ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting 
-    """ 
+    
 
     #pca = C_PCA(dataDict, sort_key) 
     #pca.plot_pca_clusters() 

@@ -1,0 +1,24 @@
+--- Model scores for features: HSVI_Traits ---
+Random Forest: R2=0.19, Cross-val mean=0.23
+Ada Boost: R2=0.13, Cross-val mean=0.17
+Gradient Boosting: R2=0.18, Cross-val mean=0.22
+Decision Tree: R2=0.06, Cross-val mean=0.06
+Support Vector Machine linear: R2=0.06, Cross-val mean=0.23
+Support Vector Machine polymonial: R2=0.06, Cross-val mean=-5.45
+
+Random Forest highest accuracy of 0.23407168331246614.
+
+--- Generation alg ---
+Predicting: Traits : Potassiumnum genrations: 15
+Best feature subset found: [ 0  1  2  8  9 12 13 18 19 23],
+ Best feature names: ['LSI' 'Chl index' 'WI' 'DWSI3' 'DWSI4' 'WBI' 'RDVI' 'EVI' 'GNDVI' 'NDLI'],
+ Corresponding R2: 0.2207870295778499
+
+--- Performance on Best Chromosome Feature Subset ---
+Selected Features: ['LSI', 'Chl index', 'WI', 'DWSI3', 'DWSI4', 'WBI', 'RDVI', 'EVI', 'GNDVI', 'NDLI']
+Random Forest: R2=0.20, Cross-val mean=0.14
+Ada Boost: R2=0.10, Cross-val mean=0.11
+Gradient Boosting: R2=0.17, Cross-val mean=0.13
+Decision Tree: R2=-0.02, Cross-val mean=-0.03
+Support Vector Machine linear: R2=-0.02, Cross-val mean=0.19
+Support Vector Machine polymonial: R2=-0.02, Cross-val mean=-5.55
