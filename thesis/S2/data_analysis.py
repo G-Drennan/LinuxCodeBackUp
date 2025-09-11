@@ -736,7 +736,7 @@ class C_gen_alg:
             f.write(f"num genrations: {self.n_gen}\n")
             f.write(f"Best feature subset found: {np.where(self.best_chromo_x_overall)[0]},\n Best feature names: {best_features},\n Corresponding R2: {best_score[0]}\n") 
 
-        #self.plot_gen_accuracies(score=best_score, x=min(best_score), y=max(best_score), class_name=class_name) #not required. 
+        self.plot_gen_accuracies(score=best_score, x=min(best_score), y=max(best_score), class_name=class_name) #not required.  
         self.run_best_chromo_on_other_ML(features_key, class_main_key, class_name) 
 
     def run_best_chromo_on_other_ML(self, features_key, class_main_key, class_name): 
@@ -785,7 +785,15 @@ class C_gen_alg:
             f.write(f"\n{model_obj.models_dict[best_model_name]} highest accuracy of {max_cross_val_mean}.\n")  
         self.best_model_name = model_obj.models_dict[best_model_name] 
         
-        
+    
+    def set_model(self, features_key, class_main_key, class_name, model_name = "RF", run_gen_test = True):
+        self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key  = self.tnt.make_training_n_test_sets(features_key, class_main_key, class_name)
+        model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test) 
+        self.model, r2_score, cross_val_mean  = model_obj.train_model(class_name, model_name)   
+        if run_gen_test:
+            n_feat = self.x_train.shape[1] 
+            self.generations(n_feat) 
+
     def generations(self,n_feat,size=80,n_parents=64,mutation_rate=0.20):
         print("Start generations")
         best_chromo_x= []
@@ -810,7 +818,6 @@ class C_gen_alg:
             np.random.shuffle(chromosome)
             population.append(chromosome)
         return population
-
 
     def fitness_score(self, population, use_cross_val = False):
         print("fitness_score")
@@ -839,7 +846,6 @@ class C_gen_alg:
             population_nextgen.append(pop_after_fit[i])
         return population_nextgen
 
-
     def crossover(self, pop_after_sel):
         print("crossover") 
         pop_nextgen = pop_after_sel
@@ -849,7 +855,6 @@ class C_gen_alg:
             new_par = np.concatenate((child_1[:len(child_1)//2],child_2[len(child_1)//2:]))
             pop_nextgen.append(new_par)
         return pop_nextgen
-
 
     def mutation(self, pop_after_cross,mutation_rate,n_feat):   
         print("mutation")  
@@ -865,6 +870,7 @@ class C_gen_alg:
                 chromo[j] = not chromo[j]  
             pop_next_gen.append(chromo)
         return pop_next_gen
+    
         
     def plot_gen_accuracies(self, score,x,y,class_name,c = "b"): #plot the generation accuracies. 
         gen = list(range(1, self.n_gen + 1)) 
@@ -983,8 +989,10 @@ if __name__ == '__main__':
     print(class_names) #remove leaf from traits.  
 
     for class_name in class_names: 
-        ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting 
-    
+        ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting    
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ junk ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 
     #pca = C_PCA(dataDict, sort_key) 
     #pca.plot_pca_clusters() 
