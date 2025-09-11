@@ -1,9 +1,9 @@
 --- Model scores for features: HSVI_Traits ---
-Random Forest: R2=0.71, Cross-val mean=0.67
+Random Forest: R2=0.71, Cross-val mean=0.68
 Ada Boost: R2=0.67, Cross-val mean=0.63
 Gradient Boosting: R2=0.70, Cross-val mean=0.67
-Decision Tree: R2=0.57, Cross-val mean=0.58
-Support Vector Machine linear: R2=0.57, Cross-val mean=0.68
-Support Vector Machine polymonial: R2=0.57, Cross-val mean=-6.98
+Decision Tree: R2=0.58, Cross-val mean=0.58
+Support Vector Machine linear: R2=0.58, Cross-val mean=0.68
+Support Vector Machine polymonial: R2=0.58, Cross-val mean=-6.98
 
 Support Vector Machine linear highest accuracy of 0.6792363786593687.

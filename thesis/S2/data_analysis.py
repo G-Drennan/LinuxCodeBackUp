@@ -809,7 +809,7 @@ class C_gen_alg:
 
             # Save best chromosome and score, to keep in next gen  
             best_chromo = pop_after_fit[0]
-            best_chromo_score = scores[0]
+            best_chromo_score = scores[0] 
 
             pop_after_sel = self.selection(pop_after_fit, n_parents)
             pop_after_cross, parent_map = self.crossover(pop_after_sel)
