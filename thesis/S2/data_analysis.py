@@ -805,13 +805,35 @@ class C_gen_alg:
         for i in range(self.n_gen): 
             scores, pop_after_fit = self.fitness_score(population_nextgen)  
             print('Best score in generation', i+1, ':', scores[:1])
+
+
+            # Save best chromosome and score, to keep in next gen  
+            best_chromo = pop_after_fit[0]
+            best_chromo_score = scores[0]
+
             pop_after_sel = self.selection(pop_after_fit, n_parents)
-            pop_after_cross = self.crossover(pop_after_sel)
+            pop_after_cross, parent_map = self.crossover(pop_after_sel)
 
-            population_nextgen = self.mutation(pop_after_cross, mutation_rate, n_feat)
+            # Estimate fitness scores for all individuals
+            estimated_scores = scores[:n_parents]  # Scores of selected parents
+            for p1, p2 in parent_map:
+                avg_score = (estimated_scores[p1] + estimated_scores[p2]) / 2
+                estimated_scores.append(avg_score)
+            """ 
+            # Evaluate fitness of first offspring only 
+            first_offspring = pop_after_cross[0]
+            self.model.fit(self.x_train[:, np.where(first_offspring)[0]], self.y_train)
+            first_offspring_score = self.retrive_score(first_offspring)
+            
+            
+            # Replace first offspring if best_chromo is better
+            if best_chromo_score > first_offspring_score:
+                pop_after_cross[0] = best_chromo """
 
-            best_chromo_x.append(pop_after_fit[0])
-            best_score.append(scores[0])
+            population_nextgen = self.mutation(pop_after_cross,mutation_rate,n_feat,fitness_scores=estimated_scores) 
+
+            best_chromo_x.append(best_chromo)
+            best_score.append(best_chromo_score) 
 
         return best_chromo_x, best_score
 
@@ -855,27 +877,33 @@ class C_gen_alg:
 
     def crossover(self, pop_after_sel):
         print("crossover") 
-        pop_nextgen = pop_after_sel
-        for i in range(0,len(pop_after_sel),2):
-            new_par = []
-            child_1 , child_2 = pop_nextgen[i] , pop_nextgen[i+1]
-            new_par = np.concatenate((child_1[:len(child_1)//2],child_2[len(child_1)//2:]))
-            pop_nextgen.append(new_par)
-        return pop_nextgen
+        pop_nextgen = pop_after_sel.copy()
+        parent_map = []
 
-    def mutation(self, pop_after_cross, mutation_rate, n_feat, mut_based_on_offspring_fit = False):   
-        print("mutation")  
+        for i in range(0, len(pop_after_sel), 2):
+            child_1, child_2 = pop_after_sel[i], pop_after_sel[i+1] 
+            new_child = np.concatenate((child_1[:len(child_1)//2], child_2[len(child_1)//2:]))
+            pop_nextgen.append(new_child)
+            parent_map.append((i, i+1))  # Track parent indices
+ 
+        return pop_nextgen, parent_map  
+
+    def mutation(self, pop_after_cross, mutation_rate, n_feat, fitness_scores=None, mut_based_on_offspring_fit = False):   
+        print("mutation:")  
         mutation_range = int(mutation_rate * n_feat) 
-
-        if mut_based_on_offspring_fit:           # Apply mutation based on offspring fitness 
-            fitness_scores, _ = self.fitness_score(pop_after_cross) 
-            avg_fitness = sum(fitness_scores) / len(fitness_scores)
+        if fitness_scores or mut_based_on_offspring_fit:
+            mut_based_on_offspring_fit = True          
+            print(f"mut_based_on_offspring_fit: {mut_based_on_offspring_fit}\n")  
+            if fitness_scores is None: # Apply mutation based on offspring fitness if not provided 
+                print("fitness_scores is None") 
+                fitness_scores, _ = self.fitness_score(pop_after_cross)   
+            avg_fitness = sum(fitness_scores) / len(fitness_scores) 
                  
         pop_next_gen   = []
 
         for idx, chromo in enumerate(pop_after_cross):
             should_mutate = True 
-            if mut_based_on_offspring_fit:
+            if fitness_scores: 
                 should_mutate = fitness_scores[idx] < avg_fitness
 
             if should_mutate:
@@ -886,8 +914,6 @@ class C_gen_alg:
             pop_next_gen.append(chromo)
 
         return pop_next_gen     
-
-
     
         
     def plot_gen_accuracies(self, score,x,y,class_name,c = "b"): #plot the generation accuracies. 
@@ -1006,10 +1032,11 @@ if __name__ == '__main__':
     class_names = [f for f in class_names if 'Leaf' not in f]
     print(class_names) #remove leaf from traits.  
 
-    #ga.set_model(filenames_keys[3], filenames_keys[2], class_names[1])   
+    ga.set_model(filenames_keys[3], filenames_keys[2], class_names[1])  
+  
 
-    for class_name in class_names: 
-        ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting    
+    #for class_name in class_names: 
+        #ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting    
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ junk ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
