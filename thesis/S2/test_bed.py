@@ -29,6 +29,15 @@ from sklearn import metrics
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold, cross_val_score
 
+
+a = None
+
+if a:
+        print("Ops")
+else:
+        print("None") 
+ 
+"""
 def split(df,label):
     X_tr, X_te, Y_tr, Y_te = train_test_split(df, label, test_size=0.25, random_state=42)
     return X_tr, X_te, Y_tr, Y_te
@@ -143,7 +152,7 @@ def generations(df,label,size,n_feat,n_parents,mutation_rate,n_gen,X_train,
         best_score.append(scores[0])
     return best_chromo,best_score
 
-
+"""
 
 #~~~~~~~~~~~~~~~~~~~~~ junk code ~~~~~~~~~~~~~~~~~~~~~~~ 
 """

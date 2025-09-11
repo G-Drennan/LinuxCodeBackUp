@@ -808,11 +808,7 @@ class C_gen_alg:
             pop_after_sel = self.selection(pop_after_fit, n_parents)
             pop_after_cross = self.crossover(pop_after_sel)
 
-            # Evaluate fitness of offspring before mutation
-            scores_cross, _ = self.fitness_score(pop_after_cross)
-
-            # Apply mutation based on offspring fitness
-            population_nextgen = self.mutation(pop_after_cross, scores_cross, mutation_rate, n_feat)
+            population_nextgen = self.mutation(pop_after_cross, mutation_rate, n_feat)
 
             best_chromo_x.append(pop_after_fit[0])
             best_score.append(scores[0])
@@ -867,22 +863,37 @@ class C_gen_alg:
             pop_nextgen.append(new_par)
         return pop_nextgen
 
-    def mutation(self, pop_after_cross, fitness_scores, mutation_rate, n_feat):   
+    def mutation(self, pop_after_cross, mutation_rate, n_feat, mut_based_on_offspring_fit = False):   
         print("mutation")  
-        mutation_range = int(mutation_rate * n_feat)
-        avg_fitness = sum(fitness_scores) / len(fitness_scores)
-        pop_next_gen = []
+        mutation_range = int(mutation_rate * n_feat) 
+
+        if mut_based_on_offspring_fit:           # Apply mutation based on offspring fitness 
+            fitness_scores, _ = self.fitness_score(pop_after_cross) 
+            avg_fitness = sum(fitness_scores) / len(fitness_scores)
+                 
+        pop_next_gen   = []
 
         for idx, chromo in enumerate(pop_after_cross):
-            fitness = fitness_scores[idx]
-            # Only mutate if fitness is below average
-            if fitness < avg_fitness:
-                rand_posi = [randint(0, n_feat - 1) for _ in range(mutation_range)]
+            if mut_based_on_offspring_fit:  
+                fitness = fitness_scores[idx]
+                # Only mutate if fitness is below average
+                if fitness < avg_fitness:
+                    rand_posi = [randint(0, n_feat - 1) for _ in range(mutation_range)]
+                    for j in rand_posi:
+                        chromo[j] = not chromo[j]
+            else:
+                chromo = pop_after_cross[idx]
+                rand_posi = [] 
+                for i in range(0,mutation_range):
+                    pos = randint(0,n_feat-1)
+                    rand_posi.append(pos)
                 for j in rand_posi:
-                    chromo[j] = not chromo[j]
+                    chromo[j] = not chromo[j]  
+            
             pop_next_gen.append(chromo)
 
-        return pop_next_gen 
+        return pop_next_gen     
+
 
     
         
