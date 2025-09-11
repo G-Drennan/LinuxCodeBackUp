@@ -874,19 +874,12 @@ class C_gen_alg:
         pop_next_gen   = []
 
         for idx, chromo in enumerate(pop_after_cross):
-            if mut_based_on_offspring_fit:  
-                fitness = fitness_scores[idx]
-                # Only mutate if fitness is below average
-                if fitness < avg_fitness:
-                    rand_posi = [randint(0, n_feat - 1) for _ in range(mutation_range)]
-                    for j in rand_posi:
-                        chromo[j] = not chromo[j]
-            else:
-                chromo = pop_after_cross[idx]
-                rand_posi = [] 
-                for i in range(0,mutation_range):
-                    pos = randint(0,n_feat-1)
-                    rand_posi.append(pos)
+            should_mutate = True 
+            if mut_based_on_offspring_fit:
+                should_mutate = fitness_scores[idx] < avg_fitness
+
+            if should_mutate:
+                rand_posi = [randint(0, n_feat - 1) for _ in range(mutation_range)]
                 for j in rand_posi:
                     chromo[j] = not chromo[j]  
             
