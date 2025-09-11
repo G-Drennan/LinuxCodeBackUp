@@ -792,22 +792,33 @@ class C_gen_alg:
         self.model, r2_score, cross_val_mean  = model_obj.train_model(class_name, model_name)   
         if run_gen_test:
             n_feat = self.x_train.shape[1] 
-            self.generations(n_feat) 
+            best_chromo_x, best_score = self.generations(n_feat=n_feat)    
+            print(best_chromo_x, best_score)  
+            self.plot_gen_accuracies(score=best_score, x=min(best_score), y=max(best_score), class_name=class_name)
 
-    def generations(self,n_feat,size=80,n_parents=64,mutation_rate=0.20):
+    def generations(self, n_feat, size=80, n_parents=64, mutation_rate=0.20):
         print("Start generations")
-        best_chromo_x= []
-        best_score= [] 
-        population_nextgen= self.initilization_of_population(size,n_feat)
+        best_chromo_x = []
+        best_score = []  
+        population_nextgen = self.initilization_of_population(size, n_feat)
+
         for i in range(self.n_gen): 
             scores, pop_after_fit = self.fitness_score(population_nextgen)  
-            print('Best score in generation',i+1,':',scores[:1])  #2
-            pop_after_sel = self.selection(pop_after_fit,n_parents)
-            pop_after_cross = self.crossover(pop_after_sel) 
-            population_nextgen = self.mutation(pop_after_cross,mutation_rate,n_feat)
+            print('Best score in generation', i+1, ':', scores[:1])
+            pop_after_sel = self.selection(pop_after_fit, n_parents)
+            pop_after_cross = self.crossover(pop_after_sel)
+
+            # Evaluate fitness of offspring before mutation
+            scores_cross, _ = self.fitness_score(pop_after_cross)
+
+            # Apply mutation based on offspring fitness
+            population_nextgen = self.mutation(pop_after_cross, scores_cross, mutation_rate, n_feat)
+
             best_chromo_x.append(pop_after_fit[0])
             best_score.append(scores[0])
-        return best_chromo_x, best_score 
+
+        return best_chromo_x, best_score
+
 
     def initilization_of_population(self, size,n_feat):
         print("Start initilization of population") 
@@ -856,20 +867,23 @@ class C_gen_alg:
             pop_nextgen.append(new_par)
         return pop_nextgen
 
-    def mutation(self, pop_after_cross,mutation_rate,n_feat):   
+    def mutation(self, pop_after_cross, fitness_scores, mutation_rate, n_feat):   
         print("mutation")  
-        mutation_range = int(mutation_rate*n_feat)
+        mutation_range = int(mutation_rate * n_feat)
+        avg_fitness = sum(fitness_scores) / len(fitness_scores)
         pop_next_gen = []
-        for n in range(0,len(pop_after_cross)):
-            chromo = pop_after_cross[n]
-            rand_posi = [] 
-            for i in range(0,mutation_range):
-                pos = randint(0,n_feat-1)
-                rand_posi.append(pos)
-            for j in rand_posi:
-                chromo[j] = not chromo[j]  
+
+        for idx, chromo in enumerate(pop_after_cross):
+            fitness = fitness_scores[idx]
+            # Only mutate if fitness is below average
+            if fitness < avg_fitness:
+                rand_posi = [randint(0, n_feat - 1) for _ in range(mutation_range)]
+                for j in rand_posi:
+                    chromo[j] = not chromo[j]
             pop_next_gen.append(chromo)
-        return pop_next_gen
+
+        return pop_next_gen 
+
     
         
     def plot_gen_accuracies(self, score,x,y,class_name,c = "b"): #plot the generation accuracies. 
@@ -980,13 +994,15 @@ if __name__ == '__main__':
 
     # Ploting spectra based off conditions
     sort_key = 'Conditions' 
-    dictManager.write_dict_to_file(dataDict, "original") 
+    dictManager.write_dict_to_file(dataDict, "original")  
     
-    ga = C_gen_alg(dataDict, n_gen = 15)     
+    ga = C_gen_alg(dataDict, n_gen = 20)          
     class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
     print(class_names)
     class_names = [f for f in class_names if 'Leaf' not in f]
     print(class_names) #remove leaf from traits.  
+
+    #ga.set_model(filenames_keys[3], filenames_keys[2], class_names[1])   
 
     for class_name in class_names: 
         ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting    
