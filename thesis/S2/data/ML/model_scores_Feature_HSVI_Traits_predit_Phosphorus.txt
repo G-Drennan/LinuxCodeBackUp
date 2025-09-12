@@ -1,25 +1,21 @@
 --- Model scores for features: HSVI_Traits ---
-Random Forest: R2=0.21, Cross-val mean=0.17
-Ada Boost: R2=0.03, Cross-val mean=0.07
-Gradient Boosting: R2=0.13, Cross-val mean=0.16
-Decision Tree: R2=0.03, Cross-val mean=-0.01
-Support Vector Machine linear: R2=0.03, Cross-val mean=0.13
-Support Vector Machine polymonial: R2=0.03, Cross-val mean=-8.76
+Random Forest: R2=0.19, Cross-val mean=0.18
+Ada Boost: R2=0.01, Cross-val mean=0.05
+Gradient Boosting: R2=0.12, Cross-val mean=0.17
+Decision Tree: R2=0.02, Cross-val mean=-0.02
 
-Random Forest highest accuracy of 0.17268715218553082.
+Random Forest highest accuracy of 0.17825516371535893.
 
 --- Generation alg ---
-Predicting: Traits : Phosphorusnum genrations: 15
-Best feature subset found: [ 0  1  2  3  6  9 10 12 13 16 17 19 20 21 22 23 24],
- Best feature names: ['LSI' 'Chl index' 'WI' 'CAI' 'DWSI1' 'DWSI4' 'DWSI5' 'WBI' 'RDVI' 'LAI'
- 'IPVI' 'GNDVI' 'RENDVI' 'NDWI' 'NDNI' 'NDLI' 'NPCI'],
- Corresponding R2: 0.20215450972797278
+Predicting: Traits : Phosphorusnum genrations: 30
+Best feature subset found: [ 0  4  6  9 10 12 14 16 18 20 21 22 24],
+ Best feature names: ['LSI' 'NRI1510' 'DWSI1' 'DWSI4' 'DWSI5' 'WBI' 'GDVI' 'LAI' 'EVI' 'RENDVI'
+ 'NDWI' 'NDNI' 'NPCI'],
+ Corresponding R2: 0.2129812509315172
 
 --- Performance on Best Chromosome Feature Subset ---
-Selected Features: ['LSI', 'Chl index', 'WI', 'CAI', 'DWSI1', 'DWSI4', 'DWSI5', 'WBI', 'RDVI', 'LAI', 'IPVI', 'GNDVI', 'RENDVI', 'NDWI', 'NDNI', 'NDLI', 'NPCI']
-Random Forest: R2=0.19, Cross-val mean=0.17
-Ada Boost: R2=-0.03, Cross-val mean=-0.00
-Gradient Boosting: R2=0.13, Cross-val mean=0.16
-Decision Tree: R2=-0.05, Cross-val mean=-0.03
-Support Vector Machine linear: R2=-0.05, Cross-val mean=0.10
-Support Vector Machine polymonial: R2=-0.05, Cross-val mean=-1.32
+Selected Features: ['LSI', 'NRI1510', 'DWSI1', 'DWSI4', 'DWSI5', 'WBI', 'GDVI', 'LAI', 'EVI', 'RENDVI', 'NDWI', 'NDNI', 'NPCI']
+Random Forest: R2=0.23, Cross-val mean=0.16
+Ada Boost: R2=0.02, Cross-val mean=0.01
+Gradient Boosting: R2=0.17, Cross-val mean=0.14
+Decision Tree: R2=0.01, Cross-val mean=-0.02

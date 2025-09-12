@@ -561,7 +561,8 @@ class C_Dession_trees:
         self.y_test = y_test 
         
 
-        self.models = ["RF", "AB", "GB", "DT", "svr_linear", "svr_poly"]   
+        self.models = ["RF", "AB", "GB", "DT"] #, "svr_linear", "svr_poly"]   #not using as its used in the previous paper, SRV to only be used to quickly gague the best traits to run the MLAs on.
+                                                        #additionally they are removed to improve speed of the program.   
         self.models_full = ["Random Forest", "Ada Boost", "Gradient Boosting", "Decision Tree", "Support Vector Machine polymonial", "Support Vector Machine linear"]  
         self.models_dict = {"RF":"Random Forest", "AB":"Ada Boost", "GB":"Gradient Boosting", "DT":"Decision Tree", "svr_linear": "Support Vector Machine linear", "svr_poly": "Support Vector Machine polymonial"} 
         self.model = None #model  
