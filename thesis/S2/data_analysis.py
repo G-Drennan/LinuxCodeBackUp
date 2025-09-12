@@ -561,7 +561,8 @@ class C_Dession_trees:
         self.y_test = y_test 
         
 
-        self.models = ["RF", "AB", "GB", "DT", "svr_linear", "svr_poly"]   
+        self.models = ["RF", "AB", "GB", "DT"] #, "svr_linear", "svr_poly"]   #not using as its used in the previous paper, SRV to only be used to quickly gague the best traits to run the MLAs on.
+                                                        #additionally they are removed to improve speed of the program.   
         self.models_full = ["Random Forest", "Ada Boost", "Gradient Boosting", "Decision Tree", "Support Vector Machine polymonial", "Support Vector Machine linear"]  
         self.models_dict = {"RF":"Random Forest", "AB":"Ada Boost", "GB":"Gradient Boosting", "DT":"Decision Tree", "svr_linear": "Support Vector Machine linear", "svr_poly": "Support Vector Machine polymonial"} 
         self.model = None #model  
@@ -706,7 +707,7 @@ class C_gen_alg:
         self.n_gen = n_gen
         self.best_model_name = "missing" 
 
-    def gen_alg_on_best_model(self, features_key, class_main_key, class_name):
+    def gen_alg_on_best_model(self, features_key, class_main_key, class_name): 
         print(f"run prediction on {class_main_key} : {class_name}")  
         
         #chromo_df_bc,score_bc=generations(data_bc,label_bc)
@@ -740,7 +741,7 @@ class C_gen_alg:
         self.run_best_chromo_on_other_ML(features_key, class_main_key, class_name) 
 
     def run_best_chromo_on_other_ML(self, features_key, class_main_key, class_name): 
-        
+        print("run best chromo on other ML") 
         selected_indices = np.where(self.best_chromo_x_overall)[0]
         selected_features = self.feature_names[self.best_chromo_x_overall]
 
@@ -762,6 +763,7 @@ class C_gen_alg:
 
     
     def find_best_model(self, features_key, class_main_key, name):  
+        print("find best model")
         max_cross_val_mean = 0
 
         model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test) 
@@ -786,23 +788,25 @@ class C_gen_alg:
         self.best_model_name = model_obj.models_dict[best_model_name] 
         
     
-    def set_model(self, features_key, class_main_key, class_name, model_name = "RF", run_gen_test = True):
+    def test_set_model(self, features_key, class_main_key, class_name, model_name = "RF", run_gen_test = True):
+        print("testing...") 
         self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key  = self.tnt.make_training_n_test_sets(features_key, class_main_key, class_name)
         model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test) 
         self.model, r2_score, cross_val_mean  = model_obj.train_model(class_name, model_name)   
-        if run_gen_test:
+        if run_gen_test: 
             n_feat = self.x_train.shape[1] 
             best_chromo_x, best_score = self.generations(n_feat=n_feat)    
             print(best_chromo_x, best_score)  
             self.plot_gen_accuracies(score=best_score, x=min(best_score), y=max(best_score), class_name=class_name)
 
-    def generations(self, n_feat, size=80, n_parents=64, mutation_rate=0.20):
+    def generations(self, n_feat, size=80, n_parents=64, mutation_rate=0.20, esitmate_next_gen_scores = True, estimated_scores = None):
         print("Start generations")
         best_chromo_x = []
         best_score = []  
         population_nextgen = self.initilization_of_population(size, n_feat)
 
         for i in range(self.n_gen): 
+            print("\nNew generation") 
             scores, pop_after_fit = self.fitness_score(population_nextgen)  
             print('Best score in generation', i+1, ':', scores[:1])
 
@@ -812,23 +816,15 @@ class C_gen_alg:
             best_chromo_score = scores[0] 
 
             pop_after_sel = self.selection(pop_after_fit, n_parents)
-            pop_after_cross, parent_map = self.crossover(pop_after_sel)
-
-            # Estimate fitness scores for all individuals
-            estimated_scores = scores[:n_parents]  # Scores of selected parents
-            for p1, p2 in parent_map:
-                avg_score = (estimated_scores[p1] + estimated_scores[p2]) / 2
-                estimated_scores.append(avg_score)
-            """ 
-            # Evaluate fitness of first offspring only 
-            first_offspring = pop_after_cross[0]
-            self.model.fit(self.x_train[:, np.where(first_offspring)[0]], self.y_train)
-            first_offspring_score = self.retrive_score(first_offspring)
+            pop_after_cross, parent_map = self.crossover(pop_after_sel) 
             
-            
-            # Replace first offspring if best_chromo is better
-            if best_chromo_score > first_offspring_score:
-                pop_after_cross[0] = best_chromo """
+            if esitmate_next_gen_scores: 
+                # Estimate fitness scores for all individuals
+                print("Estimate fitness scores for next gen") 
+                estimated_scores = scores[:n_parents]  # Scores of selected parents
+                for p1, p2 in parent_map:
+                    avg_score = (estimated_scores[p1] + estimated_scores[p2]) / 2
+                    estimated_scores.append(avg_score)
 
             population_nextgen = self.mutation(pop_after_cross,mutation_rate,n_feat,fitness_scores=estimated_scores) 
 
@@ -888,14 +884,14 @@ class C_gen_alg:
  
         return pop_nextgen, parent_map  
 
-    def mutation(self, pop_after_cross, mutation_rate, n_feat, fitness_scores=None, mut_based_on_offspring_fit = False):   
-        print("mutation:")  
+    def mutation(self, pop_after_cross, mutation_rate, n_feat, fitness_scores = None, mut_based_on_offspring_fit = False):   
+        print("mutation")  
         mutation_range = int(mutation_rate * n_feat) 
         if fitness_scores or mut_based_on_offspring_fit:
-            mut_based_on_offspring_fit = True          
-            print(f"mut_based_on_offspring_fit: {mut_based_on_offspring_fit}\n")  
+            mut_based_on_offspring_fit = True           
+            print(f"mut_based_on_offspring_fit: {mut_based_on_offspring_fit}")   
             if fitness_scores is None: # Apply mutation based on offspring fitness if not provided 
-                print("fitness_scores is None") 
+                print("fitness_scores is None. Calculating offspring fitness.")  
                 fitness_scores, _ = self.fitness_score(pop_after_cross)   
             avg_fitness = sum(fitness_scores) / len(fitness_scores) 
                  
@@ -917,6 +913,7 @@ class C_gen_alg:
     
         
     def plot_gen_accuracies(self, score,x,y,class_name,c = "b"): #plot the generation accuracies. 
+        print("Plotting gen over time...") 
         gen = list(range(1, self.n_gen + 1)) 
         plt.figure(figsize=(6,4))
         ax = sns.pointplot(x=gen, y=score,color = c )
@@ -1026,17 +1023,18 @@ if __name__ == '__main__':
     sort_key = 'Conditions' 
     dictManager.write_dict_to_file(dataDict, "original")  
     
-    ga = C_gen_alg(dataDict, n_gen = 20)          
+    ga = C_gen_alg(dataDict, n_gen = 30)           
     class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
     print(class_names)
     class_names = [f for f in class_names if 'Leaf' not in f]
     print(class_names) #remove leaf from traits.  
 
-    ga.set_model(filenames_keys[3], filenames_keys[2], class_names[1])  
+    #ga.set_model(filenames_keys[3], filenames_keys[2], class_names[1])  
   
 
-    #for class_name in class_names: 
-        #ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting    
+    for class_name in class_names:  
+        print(f"\nNew model {class_name}")   
+        ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting    
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ junk ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
