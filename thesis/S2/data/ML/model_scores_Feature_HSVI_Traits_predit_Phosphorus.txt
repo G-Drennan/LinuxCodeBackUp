@@ -1,21 +1,21 @@
 --- Model scores for features: HSVI_Traits ---
-Random Forest: R2=0.19, Cross-val mean=0.18
-Ada Boost: R2=0.01, Cross-val mean=0.05
+Random Forest: R2=0.18, Cross-val mean=0.18
+Ada Boost: R2=0.03, Cross-val mean=0.06
 Gradient Boosting: R2=0.12, Cross-val mean=0.17
-Decision Tree: R2=0.02, Cross-val mean=-0.02
+Decision Tree: R2=0.01, Cross-val mean=0.01
 
-Random Forest highest accuracy of 0.17825516371535893.
+Random Forest highest accuracy of 0.17589364251651973.
 
 --- Generation alg ---
 Predicting: Traits : Phosphorusnum genrations: 30
-Best feature subset found: [ 0  4  6  9 10 12 14 16 18 20 21 22 24],
- Best feature names: ['LSI' 'NRI1510' 'DWSI1' 'DWSI4' 'DWSI5' 'WBI' 'GDVI' 'LAI' 'EVI' 'RENDVI'
- 'NDWI' 'NDNI' 'NPCI'],
- Corresponding R2: 0.2129812509315172
+Best feature subset found: [ 0  1  6  9 12 14 16 17 18 20 21 22 23],
+ Best feature names: ['LSI' 'Chl index' 'DWSI1' 'DWSI4' 'WBI' 'GDVI' 'LAI' 'IPVI' 'EVI'
+ 'RENDVI' 'NDWI' 'NDNI' 'NDLI'],
+ Corresponding R2: 0.2144211536315459
 
 --- Performance on Best Chromosome Feature Subset ---
-Selected Features: ['LSI', 'NRI1510', 'DWSI1', 'DWSI4', 'DWSI5', 'WBI', 'GDVI', 'LAI', 'EVI', 'RENDVI', 'NDWI', 'NDNI', 'NPCI']
-Random Forest: R2=0.23, Cross-val mean=0.16
-Ada Boost: R2=0.02, Cross-val mean=0.01
+Selected Features: ['LSI', 'Chl index', 'DWSI1', 'DWSI4', 'WBI', 'GDVI', 'LAI', 'IPVI', 'EVI', 'RENDVI', 'NDWI', 'NDNI', 'NDLI']
+Random Forest: R2=0.23, Cross-val mean=0.11
+Ada Boost: R2=-0.04, Cross-val mean=-0.04
 Gradient Boosting: R2=0.17, Cross-val mean=0.14
-Decision Tree: R2=0.01, Cross-val mean=-0.02
+Decision Tree: R2=0.16, Cross-val mean=-0.01

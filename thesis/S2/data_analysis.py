@@ -737,8 +737,8 @@ class C_gen_alg:
             f.write(f"num genrations: {self.n_gen}\n")
             f.write(f"Best feature subset found: {np.where(self.best_chromo_x_overall)[0]},\n Best feature names: {best_features},\n Corresponding R2: {best_score[0]}\n") 
 
-        self.plot_gen_accuracies(score=avg_chromo_score, x=min(best_score), y=max(best_score), class_name=class_name) #not required.  
-        self.run_best_chromo_on_other_ML(features_key, class_main_key, class_name) 
+        self.plot_gen_accuracies(score=avg_chromo_score, x=min(avg_chromo_score), y=max(avg_chromo_score), class_name=class_name) #not required.  
+        self.run_best_chromo_on_other_ML(features_key, class_main_key, class_name)  
 
     def run_best_chromo_on_other_ML(self, features_key, class_main_key, class_name): 
         print("run best chromo on other ML") 
@@ -918,17 +918,21 @@ class C_gen_alg:
         return pop_next_gen     
     
         
-    def plot_gen_accuracies(self, score,x,y,class_name,c = "b"): #plot the generation accuracies. 
-        print("Plotting gen over time...") 
-        gen = list(range(1, self.n_gen + 1)) 
-        plt.figure(figsize=(6,4))
-        ax = sns.pointplot(x=gen, y=score,color = c )
-        ax.set(xlabel="Generation", ylabel="R2") 
-        ax.set_title(f"Generation accuracies on best model to predict {class_name}")  
-        ax.set(ylim=(x,y)) 
-        plt.savefig(f'{self.outPutPath}plot_gen_accuracies_{self.best_model_name}_predict_{class_name}.png') 
+    def plot_gen_accuracies(self, score, x, y, class_name, c="b"):  # plot the generation accuracies.
+        print("Plotting gen over time...")
+        gen = list(range(1, self.n_gen + 1))
+        plt.figure(figsize=(6, 4))
+        ax = sns.pointplot(x=gen, y=score, color=c)
+        ax.set(xlabel="Generation", ylabel="R2")
+        ax.set_title(f"Generation accuracies on best model to predict {class_name}")
+        ax.set(ylim=(x, y))
+        # Label every second tick on the x-axis
+        ax.xaxis.set_major_locator(plt.MultipleLocator(2))
+        # Turn on the grid 
+        ax.grid(True, linestyle='--', alpha=0.6)
+        plt.savefig(f'{self.outPutPath}plot_gen_accuracies_{self.best_model_name}_predict_{class_name}.png')
         plt.show()
-        plt.close() 
+        plt.close()
         #save the plot
          
 

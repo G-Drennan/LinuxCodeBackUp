@@ -1,21 +1,21 @@
 --- Model scores for features: HSVI_Traits ---
 Random Forest: R2=0.93, Cross-val mean=0.91
-Ada Boost: R2=0.90, Cross-val mean=0.88
+Ada Boost: R2=0.90, Cross-val mean=0.89
 Gradient Boosting: R2=0.93, Cross-val mean=0.91
-Decision Tree: R2=0.86, Cross-val mean=0.84
+Decision Tree: R2=0.87, Cross-val mean=0.83
 
-Random Forest highest accuracy of 0.9078881917217988.
+Random Forest highest accuracy of 0.9080680645509119.
 
 --- Generation alg ---
 Predicting: Traits : Chlorophyllnum genrations: 30
-Best feature subset found: [ 2  3  7  8  9 11 14 15 18 19 20 22],
- Best feature names: ['WI' 'CAI' 'DWSI2' 'DWSI3' 'DWSI4' 'ChlDela' 'GDVI' 'NDVI1' 'EVI' 'GNDVI'
- 'RENDVI' 'NDNI'],
- Corresponding R2: 0.9299364567501651
+Best feature subset found: [ 1  2  3  7  8  9 11 14 16 18 19 20 21 22],
+ Best feature names: ['Chl index' 'WI' 'CAI' 'DWSI2' 'DWSI3' 'DWSI4' 'ChlDela' 'GDVI' 'LAI'
+ 'EVI' 'GNDVI' 'RENDVI' 'NDWI' 'NDNI'],
+ Corresponding R2: 0.9289537761152256
 
 --- Performance on Best Chromosome Feature Subset ---
-Selected Features: ['WI', 'CAI', 'DWSI2', 'DWSI3', 'DWSI4', 'ChlDela', 'GDVI', 'NDVI1', 'EVI', 'GNDVI', 'RENDVI', 'NDNI']
+Selected Features: ['Chl index', 'WI', 'CAI', 'DWSI2', 'DWSI3', 'DWSI4', 'ChlDela', 'GDVI', 'LAI', 'EVI', 'GNDVI', 'RENDVI', 'NDWI', 'NDNI']
 Random Forest: R2=0.93, Cross-val mean=0.91
-Ada Boost: R2=0.90, Cross-val mean=0.88
+Ada Boost: R2=0.90, Cross-val mean=0.89
 Gradient Boosting: R2=0.93, Cross-val mean=0.90
-Decision Tree: R2=0.88, Cross-val mean=0.83
+Decision Tree: R2=0.88, Cross-val mean=0.84
