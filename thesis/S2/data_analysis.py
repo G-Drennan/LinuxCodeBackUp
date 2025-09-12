@@ -721,7 +721,7 @@ class C_gen_alg:
 
         n_feat = self.x_train.shape[1] 
         print(n_feat)  
-        best_chromo_x, best_score = self.generations(n_feat=n_feat) #size=5, n_parents=4, 
+        best_chromo_x, best_score, avg_chromo_score = self.generations(n_feat=n_feat)    
         self.best_chromo_x_overall = max(zip(best_score, best_chromo_x), key=lambda x: x[0])[1]
  
         print("Best feature subset found:", np.where(self.best_chromo_x_overall)[0])
@@ -729,16 +729,16 @@ class C_gen_alg:
         self.feature_names = np.array(self.tnt.extract_features(features_key)[1])
         best_features = self.feature_names[self.best_chromo_x_overall]
         print("Best feature names:", best_features)
-        print("Corresponding R2:", best_score[0]) 
+        print("Corresponding R2:", best_score[0])  
 
         with open(f'{self.score_file_path}', 'a') as f: 
             f.write(f"\n--- Generation alg ---\n") 
             f.write(f"Predicting: {class_main_key} : {class_name}") 
             f.write(f"num genrations: {self.n_gen}\n")
             f.write(f"Best feature subset found: {np.where(self.best_chromo_x_overall)[0]},\n Best feature names: {best_features},\n Corresponding R2: {best_score[0]}\n") 
-
-        self.plot_gen_accuracies(score=best_score, x=min(best_score), y=max(best_score), class_name=class_name) #not required.  
-        self.run_best_chromo_on_other_ML(features_key, class_main_key, class_name) 
+ 
+        self.plot_gen_accuracies(score_1=avg_chromo_score, score_2=best_score, y_min=min(best_score), y_max=max(best_score), class_name=class_name, lables=['average', 'best'])   
+        self.run_best_chromo_on_other_ML(features_key, class_main_key, class_name)   
 
     def run_best_chromo_on_other_ML(self, features_key, class_main_key, class_name): 
         print("run best chromo on other ML") 
@@ -795,14 +795,15 @@ class C_gen_alg:
         self.model, r2_score, cross_val_mean  = model_obj.train_model(class_name, model_name)   
         if run_gen_test: 
             n_feat = self.x_train.shape[1] 
-            best_chromo_x, best_score = self.generations(n_feat=n_feat)    
-            print(best_chromo_x, best_score)  
-            self.plot_gen_accuracies(score=best_score, x=min(best_score), y=max(best_score), class_name=class_name)
+            best_chromo_x, best_score, avg_chromo_score = self.generations(n_feat=n_feat)    
+            print(best_chromo_x, best_score)   
+            self.plot_gen_accuracies(score_1=avg_chromo_score, score_2=best_score, y_min=min(avg_chromo_score), y_max=max(best_score), class_name=class_name)    
 
     def generations(self, n_feat, size=80, n_parents=64, mutation_rate=0.20, esitmate_next_gen_scores = True, estimated_scores = None):
         print("Start generations")
-        best_chromo_x = []
-        best_score = []  
+        best_chromo_x = [] 
+        best_score = []
+        avg_chromo_score = []  # <-- change to a list 
         population_nextgen = self.initilization_of_population(size, n_feat)
 
         for i in range(self.n_gen): 
@@ -814,6 +815,10 @@ class C_gen_alg:
             # Save best chromosome and score, to keep in next gen  
             best_chromo = pop_after_fit[0]
             best_chromo_score = scores[0] 
+
+            avg_score = sum(scores) / len(scores)
+            avg_chromo_score.append(avg_score)   
+            print(f"Average score in generation {i+1}: {avg_score:.4f}") 
 
             pop_after_sel = self.selection(pop_after_fit, n_parents)
             pop_after_cross, parent_map = self.crossover(pop_after_sel) 
@@ -831,7 +836,7 @@ class C_gen_alg:
             best_chromo_x.append(best_chromo)
             best_score.append(best_chromo_score) 
 
-        return best_chromo_x, best_score
+        return best_chromo_x, best_score, avg_chromo_score#, np.mean(avg_chromo_score)   
 
 
     def initilization_of_population(self, size,n_feat):
@@ -912,18 +917,32 @@ class C_gen_alg:
         return pop_next_gen     
     
         
-    def plot_gen_accuracies(self, score,x,y,class_name,c = "b"): #plot the generation accuracies. 
-        print("Plotting gen over time...") 
+    def plot_gen_accuracies(self, score_1, score_2,y_min,y_max,class_name,c = "b",  lables = ['average', 'best']): #plot the generation accuracies.        
+        #self.plot_gen_accuracies(score_1=avg_chromo_score, score_2=best_chromo_x, x=min(best_score), y=max(best_score), class_name=class_name, lables=['average', 'best'])   
+        #plot both scores on the same plot
+        print("Plotting gen over time...")
         gen = list(range(1, self.n_gen + 1)) 
-        plt.figure(figsize=(6,4))
-        ax = sns.pointplot(x=gen, y=score,color = c )
-        ax.set(xlabel="Generation", ylabel="R2") 
-        ax.set_title(f"Generation accuracies on best model to predict {class_name}")  
-        ax.set(ylim=(x,y)) 
-        plt.savefig(f'{self.outPutPath}plot_gen_accuracies_{self.best_model_name}_predict_{class_name}.png') 
+         
+        width_per_gen = 0.3 
+        min_width = 7
+        max_width = 20
+        plot_width = min(max(min_width, int(self.n_gen * width_per_gen)), max_width)
+        plt.figure(figsize=(plot_width, 5))
+        # Plot average score
+        plt.plot(gen, score_1, marker='o', color='tab:orange', label=lables[0]) 
+        # Plot best score
+        plt.plot(gen, score_2, marker='o', color=c, label=lables[1])
+        plt.xlabel("Generation")
+        plt.ylabel("R2")
+        plt.title(f"Generation accuracies on best model to predict {class_name}")
+        plt.ylim(y_min-(y_min/6), y_max+(y_min/6)) 
+        plt.legend()
+        plt.grid(True, linestyle='--', alpha=0.5)
+        plt.tight_layout()
+        plt.savefig(f'{self.outPutPath}plot_gen_accuracies_{self.best_model_name}_predict_{class_name}.png')
         plt.show()
-        plt.close() 
-        #save the plot
+        plt.close()
+        #save the plot 
          
 
 class C_PCA: 
@@ -1022,22 +1041,44 @@ if __name__ == '__main__':
     # Ploting spectra based off conditions
     sort_key = 'Conditions' 
     dictManager.write_dict_to_file(dataDict, "original")  
-    
-    ga = C_gen_alg(dataDict, n_gen = 30)           
+
+    ga = C_gen_alg(dataDict, n_gen = 5)             
     class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
     print(class_names)
     class_names = [f for f in class_names if 'Leaf' not in f]
     print(class_names) #remove leaf from traits.  
 
-    #ga.set_model(filenames_keys[3], filenames_keys[2], class_names[1])  
-  
-
-    for class_name in class_names:  
+    ga.test_set_model(filenames_keys[3], filenames_keys[2], class_names[1]) 
+    """
+    for class_name in class_names:   
         print(f"\nNew model {class_name}")   
         ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting    
 
+    """ 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ junk ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+    """
+
+        
+    # Simulate R2 scores similar to those in the txt file (all close to each other)
+    np.random.seed(42)
+    n_gen = 50 
+    base = 0.18
+    score_1 = np.random.normal(loc=base, scale=0.02, size=n_gen)  # average scores
+    score_2 = np.random.normal(loc=base+0.03, scale=0.02, size=n_gen)  # best scores
+    print(score_1, score_2) 
+
+    # Clamp to [0, 0.25] for realism
+    score_1 = np.clip(score_1, 0, 0.25)
+    score_2 = np.clip(score_2, 0, 0.25)
+
+    # Test the plotting
+    dummy = C_gen_alg(dataDict, n_gen=n_gen) 
+    dummy.plot_gen_accuracies(score_1, score_2, x=0, y=0.25, class_name="test")  
+  
+    """ 
+
 
     #pca = C_PCA(dataDict, sort_key) 
     #pca.plot_pca_clusters() 
