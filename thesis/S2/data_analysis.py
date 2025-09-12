@@ -19,13 +19,15 @@
 import numpy as np
 import math 
 
+import random
+
 import os
 import pandas as pd
 import csv
 
 import matplotlib
 matplotlib.use('TkAgg')
-
+ 
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import seaborn as sns  
@@ -45,7 +47,7 @@ from sklearn.metrics import accuracy_score, r2_score, mean_squared_error, confus
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, AdaBoostRegressor 
 from sklearn.tree import DecisionTreeRegressor 
 from sklearn.model_selection import cross_val_score
-from random import randint
+
  
 
 class C_Data:
@@ -706,6 +708,13 @@ class C_gen_alg:
         os.makedirs(self.outPutPath, exist_ok=True)   
         self.n_gen = n_gen
         self.best_model_name = "missing" 
+        self.seed = 42  
+        self.rands = random.Random(self.seed)
+        self.np_rng = np.random.default_rng(self.seed)
+        np.random.seed(self.seed)
+        self.mutation_seeds = [self.rands.randint(0, 10**9) for _ in range(self.n_gen)] 
+
+        self.best_avg_fitness = 0 
 
     def gen_alg_on_best_model(self, features_key, class_main_key, class_name, mutation_rate=0.20):  
         print(f"run prediction on {class_main_key} : {class_name}")  
@@ -795,58 +804,59 @@ class C_gen_alg:
         self.model, r2_score, cross_val_mean  = model_obj.train_model(class_name, model_name)   
         if run_gen_test: 
             n_feat = self.x_train.shape[1] 
-            best_chromo_x, best_score = self.generations(n_feat=n_feat)    
+            best_chromo_x, best_score, av = self.generations(n_feat=n_feat)    
             print(best_chromo_x, best_score)  
-            self.plot_gen_accuracies(score=best_score, x=min(best_score), y=max(best_score), class_name=class_name)
+            self.plot_gen_accuracies(score=av, x=min(av), y=max(av), class_name=class_name) 
 
     def generations(self, n_feat, size=80, n_parents=64, mutation_rate=0.20, esitmate_next_gen_scores = True, estimated_scores = None):
-        print("Start generations")
+        print("\nStart generations")
         best_chromo_x = []
         best_score = []
         avg_chromo_score = []  
+
         population_nextgen = self.initilization_of_population(size, n_feat)
 
-        for i in range(self.n_gen): 
-            print("\nNew generation") 
-            scores, pop_after_fit = self.fitness_score(population_nextgen)  
+        for i in range(self.n_gen):
+            print("\nNew generation")
+            # Use per-generation seed for reproducibility in other steps
+            gen_seed = self.mutation_seeds[i]
+            scores, pop_after_fit = self.fitness_score(population_nextgen)
             print('Best score in generation', i+1, ':', scores[:1])
-
-
-            # Save best chromosome and score, to keep in next gen  
             best_chromo = pop_after_fit[0]
-            best_chromo_score = scores[0] 
-
-            
+            best_chromo_score = scores[0]
             avg_score = sum(scores) / len(scores)
-            avg_chromo_score.append(avg_score)   
-            print(f"Average score in generation {i+1}: {avg_score:.4f}") 
+            avg_chromo_score.append(avg_score)
+            print(f"Average score in generation {i+1}: {avg_score:.4f}")
 
             pop_after_sel = self.selection(pop_after_fit, n_parents)
             pop_after_cross, parent_map = self.crossover(pop_after_sel) 
-            
-            if esitmate_next_gen_scores: 
-                # Estimate fitness scores for all individuals
-                print("Estimate fitness scores for next gen") 
-                estimated_scores = scores[:n_parents]  # Scores of selected parents
+
+            if esitmate_next_gen_scores:
+                print("Estimate fitness scores for next gen")
+                estimated_scores = scores[:n_parents]
                 for p1, p2 in parent_map:
                     avg_score_parents = (estimated_scores[p1] + estimated_scores[p2]) / 2
-                    estimated_scores.append(avg_score_parents) 
-
-            population_nextgen = self.mutation(pop_after_cross,mutation_rate,n_feat,fitness_scores=estimated_scores) 
-
+                    estimated_scores.append(avg_score_parents)
+            
+            population_nextgen = self.mutation(pop_after_cross, mutation_rate, n_feat, fitness_scores=estimated_scores, seed=gen_seed)
             best_chromo_x.append(best_chromo)
             best_score.append(best_chromo_score) 
-
         return best_chromo_x, best_score, avg_chromo_score 
 
 
-    def initilization_of_population(self, size,n_feat):
-        print("Start initilization of population") 
+    def initilization_of_population(self, size, n_feat, seed=None):
+        print("Start initilization of population")
+        # Use per-generation seed if provided, else fall back to self.np_rng
+        if seed is not None:
+            np_rng = np.random.default_rng(seed)
+        else:
+            np_rng = self.np_rng
         population = []
+
         for i in range(size):
-            chromosome = np.ones(n_feat,dtype=np.bool)     
-            chromosome[:int(0.3*n_feat)]=False             
-            np.random.shuffle(chromosome)
+            chromosome = np.ones(n_feat, dtype=bool)
+            chromosome[:int(0.3 * n_feat)] = False
+            np_rng.shuffle(chromosome)
             population.append(chromosome)
         return population
 
@@ -875,7 +885,7 @@ class C_gen_alg:
         population_nextgen = []
         for i in range(n_parents):
             population_nextgen.append(pop_after_fit[i])
-        return population_nextgen
+        return population_nextgen 
 
     def crossover(self, pop_after_sel):
         print("crossover") 
@@ -888,34 +898,49 @@ class C_gen_alg:
             pop_nextgen.append(new_child)
             parent_map.append((i, i+1))  # Track parent indices
  
-        return pop_nextgen, parent_map  
+        return pop_nextgen, parent_map    
 
-    def mutation(self, pop_after_cross, mutation_rate, n_feat, fitness_scores = None, mut_based_on_offspring_fit = False):   
-        print("mutation")  
-        mutation_range = int(mutation_rate * n_feat) 
+
+    def mutation(self, pop_after_cross, mutation_rate, n_feat, fitness_scores=None, mut_based_on_offspring_fit=False, seed=None): 
+        print("mutation")
+        mutation_range = int(mutation_rate * n_feat)
+
+        if seed is not None:
+            rands = random.Random(seed)
+        else:
+            rands = self.rands 
+
         if fitness_scores or mut_based_on_offspring_fit:
-            mut_based_on_offspring_fit = True           
-            print(f"mut_based_on_offspring_fit: {mut_based_on_offspring_fit}")   
-            if fitness_scores is None: # Apply mutation based on offspring fitness if not provided 
-                print("fitness_scores is None. Calculating offspring fitness.")  
-                fitness_scores, _ = self.fitness_score(pop_after_cross)   
-            avg_fitness = sum(fitness_scores) / len(fitness_scores) 
-                 
-        pop_next_gen   = []
+            mut_based_on_offspring_fit = True
+            print(f"mut_based_on_offspring_fit: {mut_based_on_offspring_fit}")
+            if fitness_scores is None:
+                print("fitness_scores is None. Calculating offspring fitness.")
+                fitness_scores, _ = self.fitness_score(pop_after_cross)
+            avg_fitness = sum(fitness_scores) / len(fitness_scores)
+
+        pop_next_gen = []
+
+        if self.best_avg_fitness < avg_fitness:
+            self.best_avg_fitness = avg_fitness
+
+        # Pre-generate random mutation positions for each chromosome in the population
+        rand_posi_arr = [
+            [rands.randint(0, n_feat - 1) for _ in range(mutation_range)]
+            for _ in range(len(pop_after_cross))
+        ] 
 
         for idx, chromo in enumerate(pop_after_cross):
-            should_mutate = True 
-            if fitness_scores: 
-                should_mutate = fitness_scores[idx] < avg_fitness
+            should_mutate = True
+            if fitness_scores:
+                should_mutate = fitness_scores[idx] < self.best_avg_fitness
 
             if should_mutate:
-                rand_posi = [randint(0, n_feat - 1) for _ in range(mutation_range)]
+                rand_posi = rand_posi_arr[idx]
                 for j in rand_posi:
-                    chromo[j] = not chromo[j]  
-            
+                    chromo[j] = not chromo[j]
             pop_next_gen.append(chromo)
 
-        return pop_next_gen     
+        return pop_next_gen   
     
         
     def plot_gen_accuracies(self, score, x, y, class_name, c="b"):  # plot the generation accuracies.
@@ -1033,20 +1058,20 @@ if __name__ == '__main__':
     sort_key = 'Conditions' 
     dictManager.write_dict_to_file(dataDict, "original")  
     
-    ga = C_gen_alg(dataDict, n_gen = 30)           
+    ga = C_gen_alg(dataDict, n_gen = 10)            
     class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
     print(class_names)
     class_names = [f for f in class_names if 'Leaf' not in f]
     print(class_names) #remove leaf from traits.  
 
-    #ga.set_model(filenames_keys[3], filenames_keys[2], class_names[1])  
+    ga.test_set_model(filenames_keys[3], filenames_keys[2], class_names[1])  
   
-
+    """
     for class_name in class_names:  
         print(f"\nNew model {class_name}")   
         ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting    
 
-
+    """ 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ junk ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 
     #pca = C_PCA(dataDict, sort_key) 

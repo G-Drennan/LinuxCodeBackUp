@@ -13,8 +13,7 @@ from sklearn.svm import SVR
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
-from random import randint
+import matplotlib.pyplot as plt 
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -28,14 +27,22 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn import metrics
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold, cross_val_score
+import random
 
+seed = 42
+rands = random.Random(seed)  # Use the variable, not self.seed
 
-a = None
+# Example values for testing
+n_feat = 10
+mutation_range = 3
+pop_after_cross = [None] * 5  # Simulate a population of 5 chromosomes
 
-if a:
-        print("Ops")
-else:
-        print("None") 
+rand_posi_arr = [
+    [rands.randint(0, n_feat - 1) for _ in range(mutation_range)]
+    for _ in range(len(pop_after_cross))
+]
+
+print(rand_posi_arr)
  
 """
 def split(df,label):
