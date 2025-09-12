@@ -707,7 +707,7 @@ class C_gen_alg:
         self.n_gen = n_gen
         self.best_model_name = "missing" 
 
-    def gen_alg_on_best_model(self, features_key, class_main_key, class_name): 
+    def gen_alg_on_best_model(self, features_key, class_main_key, class_name, mutation_rate=0.20):  
         print(f"run prediction on {class_main_key} : {class_name}")  
         
         #chromo_df_bc,score_bc=generations(data_bc,label_bc)
@@ -721,7 +721,7 @@ class C_gen_alg:
 
         n_feat = self.x_train.shape[1] 
         print(n_feat)  
-        best_chromo_x, best_score = self.generations(n_feat=n_feat) #size=5, n_parents=4, 
+        best_chromo_x, best_score, avg_chromo_score = self.generations(n_feat=n_feat, mutation_rate=mutation_rate)     
         self.best_chromo_x_overall = max(zip(best_score, best_chromo_x), key=lambda x: x[0])[1]
  
         print("Best feature subset found:", np.where(self.best_chromo_x_overall)[0])
@@ -737,7 +737,7 @@ class C_gen_alg:
             f.write(f"num genrations: {self.n_gen}\n")
             f.write(f"Best feature subset found: {np.where(self.best_chromo_x_overall)[0]},\n Best feature names: {best_features},\n Corresponding R2: {best_score[0]}\n") 
 
-        self.plot_gen_accuracies(score=best_score, x=min(best_score), y=max(best_score), class_name=class_name) #not required.  
+        self.plot_gen_accuracies(score=avg_chromo_score, x=min(best_score), y=max(best_score), class_name=class_name) #not required.  
         self.run_best_chromo_on_other_ML(features_key, class_main_key, class_name) 
 
     def run_best_chromo_on_other_ML(self, features_key, class_main_key, class_name): 
@@ -802,7 +802,8 @@ class C_gen_alg:
     def generations(self, n_feat, size=80, n_parents=64, mutation_rate=0.20, esitmate_next_gen_scores = True, estimated_scores = None):
         print("Start generations")
         best_chromo_x = []
-        best_score = []  
+        best_score = []
+        avg_chromo_score = []  
         population_nextgen = self.initilization_of_population(size, n_feat)
 
         for i in range(self.n_gen): 
@@ -815,6 +816,11 @@ class C_gen_alg:
             best_chromo = pop_after_fit[0]
             best_chromo_score = scores[0] 
 
+            
+            avg_score = sum(scores) / len(scores)
+            avg_chromo_score.append(avg_score)   
+            print(f"Average score in generation {i+1}: {avg_score:.4f}") 
+
             pop_after_sel = self.selection(pop_after_fit, n_parents)
             pop_after_cross, parent_map = self.crossover(pop_after_sel) 
             
@@ -823,15 +829,15 @@ class C_gen_alg:
                 print("Estimate fitness scores for next gen") 
                 estimated_scores = scores[:n_parents]  # Scores of selected parents
                 for p1, p2 in parent_map:
-                    avg_score = (estimated_scores[p1] + estimated_scores[p2]) / 2
-                    estimated_scores.append(avg_score)
+                    avg_score_parents = (estimated_scores[p1] + estimated_scores[p2]) / 2
+                    estimated_scores.append(avg_score_parents) 
 
             population_nextgen = self.mutation(pop_after_cross,mutation_rate,n_feat,fitness_scores=estimated_scores) 
 
             best_chromo_x.append(best_chromo)
             best_score.append(best_chromo_score) 
 
-        return best_chromo_x, best_score
+        return best_chromo_x, best_score, avg_chromo_score 
 
 
     def initilization_of_population(self, size,n_feat):
