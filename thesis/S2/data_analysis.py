@@ -547,7 +547,7 @@ class C_Dession_trees:
                 )
         self.model.fit(self.x_train, self.y_train)
         self.y_pred = self.model.predict(self.x_test)
-        self.model_exists = True 
+        self.model_exists = True  
         return self.model   
     
     def desision_tree_regressor(self, max_depth=5):  
@@ -769,6 +769,7 @@ class C_gen_alg:
 
     def generations(self, n_feat, size=80, n_parents=64, mutation_rate=0.20, esitmate_next_gen_scores = True, estimated_scores = None):
         print("\nStart generations")
+        self.best_avg_fitness = 0  
         best_chromo_x = []
         best_score = []
         avg_chromo_score = []  

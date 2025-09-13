@@ -1,21 +1,37 @@
 --- Model scores for features: HSVI_Traits ---
-Random Forest: R2=0.19, Cross-val mean=0.23
-Ada Boost: R2=0.13, Cross-val mean=0.16
-Gradient Boosting: R2=0.18, Cross-val mean=0.23
-Decision Tree: R2=0.06, Cross-val mean=0.07
+Random Forest Train:  R2=0.89, mse = 0.020875194510192836 
+Test R2=0.20, mse = 0.14738727057582648, Cross-val mean=0.24
 
-Random Forest highest accuracy of 0.22777820339713095.
+Ada Boost Train:  R2=0.49, mse = 0.0986976085459649 
+Test R2=0.12, mse = 0.16219391227531718, Cross-val mean=0.16
+
+Gradient Boosting Train:  R2=0.72, mse = 0.05415088593994732 
+Test R2=0.19, mse = 0.14992454062550922, Cross-val mean=0.22
+
+Decision Tree Train:  R2=0.48, mse = 0.10091783831619858 
+Test R2=0.05, mse = 0.17575109683124104, Cross-val mean=0.09
+
+
+Random Forest highest accuracy of 0.23862220892213343.
 
 --- Generation alg ---
 Predicting: Traits : Potassiumnum genrations: 30
-Best feature subset found: [ 2  3  5  6  8  9 10 12 13 19 20 22 23],
- Best feature names: ['WI' 'CAI' 'NRI850' 'DWSI1' 'DWSI3' 'DWSI4' 'DWSI5' 'WBI' 'RDVI' 'GNDVI'
- 'RENDVI' 'NDNI' 'NDLI'],
- Corresponding R2: 0.21624927327349708
+Best feature subset found: [ 2  6  8  9 12 13 15 16 20 22 23],
+ Best feature names: ['WI' 'DWSI1' 'DWSI3' 'DWSI4' 'WBI' 'RDVI' 'NDVI1' 'LAI' 'RENDVI' 'NDNI'
+ 'NDLI'],
+ Corresponding R2: 0.2189090486722538
 
 --- Performance on Best Chromosome Feature Subset ---
-Selected Features: ['WI', 'CAI', 'NRI850', 'DWSI1', 'DWSI3', 'DWSI4', 'DWSI5', 'WBI', 'RDVI', 'GNDVI', 'RENDVI', 'NDNI', 'NDLI']
-Random Forest: R2=0.22, Cross-val mean=0.22
-Ada Boost: R2=0.10, Cross-val mean=0.16
-Gradient Boosting: R2=0.17, Cross-val mean=0.22
-Decision Tree: R2=0.08, Cross-val mean=0.06
+Selected Features: ['WI', 'DWSI1', 'DWSI3', 'DWSI4', 'WBI', 'RDVI', 'NDVI1', 'LAI', 'RENDVI', 'NDNI', 'NDLI']
+Random Forest Train:  R2=0.89, mse = 0.020508621700723158 
+Test R2=0.22, mse = 0.1437906956012397, Cross-val mean=0.19
+
+Ada Boost Train:  R2=0.44, mse = 0.11028414755048174 
+Test R2=0.13, mse = 0.16114729474445813, Cross-val mean=0.17
+
+Gradient Boosting Train:  R2=0.70, mse = 0.058636590232846876 
+Test R2=0.19, mse = 0.14933743299518534, Cross-val mean=0.18
+
+Decision Tree Train:  R2=0.44, mse = 0.10970140833049707 
+Test R2=0.05, mse = 0.1761019440496083, Cross-val mean=0.01
+

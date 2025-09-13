@@ -1,11 +1,37 @@
 --- Model scores for features: HSVI_Traits ---
 Random Forest Train:  R2=0.95, mse = 0.019999342246988856 
 Test R2=0.71, mse = 0.12540647755655415, Cross-val mean=0.68
+
 Ada Boost Train:  R2=0.74, mse = 0.11114113308602115 
 Test R2=0.67, mse = 0.14299435985969633, Cross-val mean=0.64
+
 Gradient Boosting Train:  R2=0.89, mse = 0.048616442094787306 
 Test R2=0.70, mse = 0.13049778246863022, Cross-val mean=0.67
+
 Decision Tree Train:  R2=0.77, mse = 0.10052228712744825 
 Test R2=0.57, mse = 0.1849253723621363, Cross-val mean=0.58
 
+
 Random Forest highest accuracy of 0.6755019502223554.
+
+--- Generation alg ---
+Predicting: Traits : Nitrogennum genrations: 30
+Best feature subset found: [ 4  6  7  8  9 10 12 14 17 20 22 23 24],
+ Best feature names: ['NRI1510' 'DWSI1' 'DWSI2' 'DWSI3' 'DWSI4' 'DWSI5' 'WBI' 'GDVI' 'IPVI'
+ 'RENDVI' 'NDNI' 'NDLI' 'NPCI'],
+ Corresponding R2: 0.7203995538323259
+
+--- Performance on Best Chromosome Feature Subset ---
+Selected Features: ['NRI1510', 'DWSI1', 'DWSI2', 'DWSI3', 'DWSI4', 'DWSI5', 'WBI', 'GDVI', 'IPVI', 'RENDVI', 'NDNI', 'NDLI', 'NPCI']
+Random Forest Train:  R2=0.95, mse = 0.02121672164959444 
+Test R2=0.73, mse = 0.11743539108245522, Cross-val mean=0.65
+
+Ada Boost Train:  R2=0.72, mse = 0.12298875036803875 
+Test R2=0.65, mse = 0.15357935964921246, Cross-val mean=0.61
+
+Gradient Boosting Train:  R2=0.87, mse = 0.05729593996581318 
+Test R2=0.71, mse = 0.12683542896467045, Cross-val mean=0.65
+
+Decision Tree Train:  R2=0.75, mse = 0.10873739077395296 
+Test R2=0.66, mse = 0.14763565425441563, Cross-val mean=0.57
+
