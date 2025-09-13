@@ -470,100 +470,20 @@ class C_Test_train_split:
 
         return np.array(y), trait_name
 
-class C_svr:
-    def __init__(self, dataDict): 
-
-        self.tnt = C_Test_train_split(dataDict)
-
-    def get_svr_kernal(self, kernalType = "poly"):  
-        self.srv_exists = True
-        if kernalType == "rbf":
-            return SVR(kernel=kernalType, C=100, gamma=0.1, epsilon=0.1)
-        elif kernalType == "linear":
-            return SVR(kernel=kernalType, C=100, gamma="auto")
-        elif kernalType == "poly":
-            return SVR(
-                    kernel=kernalType, 
-                    C=100,
-                    gamma="auto",
-                    degree=3,
-                    epsilon=0.1,
-                    coef0=1
-                )
-        else: 
-            self.srv_exists = False
-            raise ValueError(f"Unsupported kernel: {kernalType!r}")
-
-    def plot_svr_all_features(self, features_key, class_main_key, kernalType = "poly"): 
-        print("Start new set of srv.") 
-
-        class_names = list(next(iter(dataDict.values()))[class_main_key].keys())
-        # Prepare for combined plotting 
-        n_traits = len(class_names) 
-        ncols = 2
-        nrows = math.ceil(n_traits / ncols)
-        output_dir = './data/figures/svr/' 
-        os.makedirs(output_dir, exist_ok=True)  # Ensure output directory exists
-
-        fig, axes = plt.subplots(nrows, ncols, figsize=(6*ncols, 5*nrows))
-        axes = axes.flatten()
-
-        for i, name in enumerate(class_names):  
-            print(name)
-            self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key    = self.tnt.make_training_n_test_sets(features_key, class_main_key, name) 
-            svr = self.get_svr_kernal(kernalType) 
-            svr.fit(self.x_train, self.y_train) 
-            y_pred_test = svr.predict(self.x_test)
-            ax = axes[i] 
-
-            # Map conditions to colors
-            unique_conditions = np.unique(self.cond_test)
-            color_map = {cond: cm.tab20(j / len(unique_conditions)) for j, cond in enumerate(unique_conditions)}
-            colors = [color_map[cond] for cond in self.cond_test]
-
-            scatter = ax.scatter(self.y_test, y_pred_test, c=colors, alpha=0.7, edgecolor="k", s=50)
-            min_val = min(np.min(self.y_test), np.min(y_pred_test))
-            max_val = max(np.max(self.y_test), np.max(y_pred_test))
-            ax.plot([min_val, max_val], [min_val, max_val], 'r--', lw=1)
-            r2 = r2_score(self.y_test, y_pred_test)
-            print(f"{name} score: {svr.score(self.x_test, self.y_test)}")
-            #r2_score(self.y_test, y_pred_test) and svr.score(self.x_test, self.y_test) produce smae results 
-            mse = mean_squared_error(self.y_test, y_pred_test)
-            ax.set_title(f"{name}\n$R^2$={r2:.3f}, MSE={mse:.2e}")
-            ax.set_xlabel("Actual")
-            ax.set_ylabel("Predicted") 
-
-            # Add legend for conditions
-            handles = [plt.Line2D([0], [0], marker='o', color='w', label=str(cond),
-                                markerfacecolor=color_map[cond], markersize=10)
-                    for cond in unique_conditions]
-            ax.legend(handles=handles, title="Condition", loc='best', fontsize=8)
-
-        # Hide unused axes if any
-        for j in range(i+1, len(axes)):
-            fig.delaxes(axes[j])
-
-        lable = features_key 
-        fig.suptitle(f"SVR {kernalType} Test Set Performance for All Traits using {lable} as features", fontsize=16)
-        fig.tight_layout(rect=[0, 0.03, 1, 0.95]) 
-        fig_path = f"{output_dir}svr_all_traits_{lable}_{kernalType}.png" 
-        fig.savefig(fig_path) 
-        print(f"Figure saved to: {fig_path}")  
-        plt.show() 
-        plt.close('all') 
-        plt.clf()  
- 
 
 class C_Dession_trees:
-    def __init__(self, x_train, x_test, y_train, y_test): 
+    def __init__(self, x_train, x_test, y_train, y_test, condition_train, condition_test, output_dir = './data/ML/'): 
         
         self.x_train = x_train
         self.x_test = x_test
         self.y_train = y_train
         self.y_test = y_test 
-        
+        self.output_dir = output_dir 
 
-        self.models = ["RF", "AB", "GB", "DT"] #, "svr_linear", "svr_poly"]   #not using as its used in the previous paper, SRV to only be used to quickly gague the best traits to run the MLAs on.
+        self.cond_test = condition_test
+        self.cond_train = condition_train 
+
+        self.models = ["RF", "AB", "GB", "DT"] #, "svr_poly", "svr_linear"]   #not using as its used in the previous paper, SRV to only be used to quickly gague the best traits to run the MLAs on.
                                                         #additionally they are removed to improve speed of the program.   
         self.models_full = ["Random Forest", "Ada Boost", "Gradient Boosting", "Decision Tree", "Support Vector Machine polymonial", "Support Vector Machine linear"]  
         self.models_dict = {"RF":"Random Forest", "AB":"Ada Boost", "GB":"Gradient Boosting", "DT":"Decision Tree", "svr_linear": "Support Vector Machine linear", "svr_poly": "Support Vector Machine polymonial"} 
@@ -571,9 +491,9 @@ class C_Dession_trees:
         self.model_exists = False 
         self.y_pred = None 
 
-    def train_model(self, class_name, model = "RF"): # features_name,
+    def train_model(self, class_name, model = "RF", file_name_modifier = 'a'): # features_name,
   
-        print(f"{class_name}: Training {model} model")  
+        print(f"{class_name}: Training {model} model")   
         if model == "RF": 
             print(model)
             self.random_forest_Regressor()
@@ -599,6 +519,10 @@ class C_Dession_trees:
         print(f"Cross-validation scores of {self.models_dict[model]}: {scores}")
         print(f"Mean cross-validation score: {cross_val_mean:.2f}") 
 
+                        
+                #plot the pred vs actual and the confusion matrix 
+        self.plot_predict_vs_actual(class_name=class_name, model_name=self.models_dict[model], file_name_modifier=file_name_modifier) 
+
         return self.model, self.r2_score, cross_val_mean  
 
     def svr(self, model_key):
@@ -621,8 +545,10 @@ class C_Dession_trees:
                     epsilon=0.1,
                     coef0=1 
                 )
+        self.model.fit(self.x_train, self.y_train)
+        self.y_pred = self.model.predict(self.x_test)
         self.model_exists = True 
-        return self.model 
+        return self.model   
     
     def desision_tree_regressor(self, max_depth=5):  
         
@@ -679,22 +605,47 @@ class C_Dession_trees:
 
         return scores, cross_val_mean 
     
-    def confusion_matrix(self, model = None):
-        if self.model_exists and model == None:
-            y_pred = self.model.predict(self.x_test)
-            cm = confusion_matrix(self.y_test, y_pred)
-            print("Confusion Matrix:") 
-            print(cm)
-            return cm
-        elif model!= None:
-            y_pred = model.predict(self.x_test) 
-            cm = confusion_matrix(self.y_test, y_pred)
-            print("Confusion Matrix:")
-            print(cm)
-            return cm
-        else:
-            print("Model not trained yet.")
-            return None
+    
+    def plot_predict_vs_actual(self, class_name, model_name="model", file_name_modifier = 'a'): 
+        # Map conditions to colors 
+        """unique_conditions = np.unique(self.cond_test)
+            color_map = {cond: cm.tab20(j / len(unique_conditions)) for j, cond in enumerate(unique_conditions)}
+            colors = [color_map[cond] for cond in self.cond_test]
+
+            scatter = ax.scatter(self.y_test, y_pred_test, c=colors, alpha=0.7, edgecolor="k", s=50)""" 
+
+        if self.y_pred is None: 
+            print("No predictions available. Run prediction first.")
+            return
+
+        unique_conditions = np.unique(self.cond_test)
+        color_map = {cond: cm.tab20(i / len(unique_conditions)) for i, cond in enumerate(unique_conditions)}
+        colors = [color_map[cond] for cond in self.cond_test] 
+
+        plt.figure(figsize=(7, 6))
+        scatter = plt.scatter(self.y_test, self.y_pred, c=colors, alpha=0.7, edgecolor="k", s=60)
+        min_val = min(np.min(self.y_test), np.min(self.y_pred))
+        max_val = max(np.max(self.y_test), np.max(self.y_pred))
+        plt.plot([min_val, max_val], [min_val, max_val], 'r--', lw=1)
+        r2 = r2_score(self.y_test, self.y_pred)
+        mse = mean_squared_error(self.y_test, self.y_pred)
+        plt.title(f"{model_name}\n$R^2$={r2:.3f}, MSE={mse:.2e}")
+        plt.xlabel("Actual")
+        plt.ylabel("Predicted")
+
+        # Add legend for conditions
+        handles = [plt.Line2D([0], [0], marker='o', color='w', label=str(cond),
+                            markerfacecolor=color_map[cond], markersize=10)
+                for cond in unique_conditions]
+        plt.legend(handles=handles, title="Condition", loc='best', fontsize=9)
+
+        os.makedirs(self.output_dir, exist_ok=True)
+        plt.tight_layout()
+        plt.savefig(f"{self.output_dir}pred_vs_actual_for_{class_name}_{model_name}_{file_name_modifier}.png")  
+        print(f"Figure saved to: {self.output_dir}pred_vs_actual_{model_name}.png")
+        plt.show()
+        plt.close() 
+
 
 class C_gen_alg:
     def __init__(self, dataDict, n_gen = 10): 
@@ -759,13 +710,14 @@ class C_gen_alg:
         self.x_test = self.x_test[:, selected_indices]  
 
         # Train and evaluate all models on selected features
-        model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test)
+        model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, output_dir=self.outPutPath)
         with open(f'{self.score_file_path}', 'a') as f: 
             f.write("\n--- Performance on Best Chromosome Feature Subset ---\n")
             f.write(f"Selected Features: {selected_features.tolist()}\n")
 
             for i, model_name in enumerate(model_obj.models): 
-                model, r2_score, cross_val_mean = model_obj.train_model(class_name, model_name) 
+                model, r2_score, cross_val_mean = model_obj.train_model(class_name, model_name, file_name_modifier='best_chromo')  
+
                 f.write(f"{model_obj.models_dict[model_name]}: R2={r2_score:.2f}, Cross-val mean={cross_val_mean:.2f}\n")
 
         print("Finished evaluating all models on best feature subset.")  
@@ -775,13 +727,13 @@ class C_gen_alg:
         print("find best model")
         max_cross_val_mean = 0
 
-        model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test) 
-        for i, model_name in enumerate(model_obj.models): #        self.models = ["RF", "AB", "GB", "DT"]
+        model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, output_dir=self.outPutPath) 
+        for i, model_name in enumerate(model_obj.models): #        self.models = ["RF", "AB", "GB", "DT"] 
  
             #genetic feature selection, save best features from first run use for other runs for consistencey and comparision. 
-            model, r2_score, cross_val_mean  = model_obj.train_model(name, model_name)
+            model, r2_score, cross_val_mean  = model_obj.train_model(name, model_name, file_name_modifier='initial_run')
             #write the model and its score to a file
-            with open(f'{self.score_file_path}', 'a') as f:  
+            with open(f'{self.score_file_path}', 'a') as f:   
                 f.write(f"{model_obj.models_dict[model_name]}: R2={r2_score:.2f}, Cross-val mean={cross_val_mean:.2f}\n")
 
             if cross_val_mean > max_cross_val_mean : #use cross_val_mean to find best model 
@@ -800,8 +752,11 @@ class C_gen_alg:
     def test_set_model(self, features_key, class_main_key, class_name, model_name = "RF", run_gen_test = True):
         print("testing...") 
         self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key  = self.tnt.make_training_n_test_sets(features_key, class_main_key, class_name)
-        model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test) 
-        self.model, r2_score, cross_val_mean  = model_obj.train_model(class_name, model_name)   
+        model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test,  output_dir=self.outPutPath) 
+        self.model, r2_score, cross_val_mean  = model_obj.train_model(class_name, model_name)    
+        
+
+        
         if run_gen_test: 
             n_feat = self.x_train.shape[1] 
             best_chromo_x, best_score, av = self.generations(n_feat=n_feat)    
@@ -959,6 +914,7 @@ class C_gen_alg:
         plt.show()
         plt.close()
         #save the plot
+    
          
 
 class C_PCA: 
@@ -1056,22 +1012,21 @@ if __name__ == '__main__':
 
     # Ploting spectra based off conditions
     sort_key = 'Conditions' 
-    dictManager.write_dict_to_file(dataDict, "original")  
+    dictManager.write_dict_to_file(dataDict, "original")   
     
-    ga = C_gen_alg(dataDict, n_gen = 10)            
+    ga = C_gen_alg(dataDict, n_gen = 30)             
     class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
     print(class_names)
     class_names = [f for f in class_names if 'Leaf' not in f]
     print(class_names) #remove leaf from traits.  
 
-    ga.test_set_model(filenames_keys[3], filenames_keys[2], class_names[1])  
+    #ga.test_set_model(filenames_keys[3], filenames_keys[2], class_names[3])   
   
-    """
+
     for class_name in class_names:  
         print(f"\nNew model {class_name}")   
-        ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting    
+        ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting     
 
-    """ 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ junk ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 
     #pca = C_PCA(dataDict, sort_key) 
@@ -1081,7 +1036,8 @@ if __name__ == '__main__':
     #pca.plot_pcs_pairplot() 
     #pca.plot_pca_clusters()       
 
-    #reg = C_svr(dataDict)  
+    
+    #reg = C_svr(dataDict)   
     #reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2], kernalType='linear') 
     #reg.plot_svr_all_features(filenames_keys[3], filenames_keys[2], kernalType='poly')     
     #reg.plot_svr_all_features(filenames_keys[4], filenames_keys[2])  #spectra takes too long
@@ -1100,4 +1056,89 @@ if __name__ == '__main__':
     plotWR = C_Plot_Wavelenght_reflectance(dataDictSort)     
     plotWR.plot_dict_wavelenghts(sort_key, filenames_keys[4]) #group the wavelengths and reflectance by lables
     """ 
+    """
     
+class C_svr:
+    def __init__(self, dataDict): 
+
+        self.tnt = C_Test_train_split(dataDict)
+
+    def get_svr_kernal(self, kernalType = "poly"):  
+        self.srv_exists = True
+        if kernalType == "rbf":
+            return SVR(kernel=kernalType, C=100, gamma=0.1, epsilon=0.1)
+        elif kernalType == "linear":
+            return SVR(kernel=kernalType, C=100, gamma="auto")
+        elif kernalType == "poly":
+            return SVR(
+                    kernel=kernalType, 
+                    C=100,
+                    gamma="auto",
+                    degree=3,
+                    epsilon=0.1,
+                    coef0=1
+                )
+        else: 
+            self.srv_exists = False
+            raise ValueError(f"Unsupported kernel: {kernalType!r}")
+
+    def plot_svr_all_features(self, features_key, class_main_key, kernalType = "poly"): 
+        print("Start new set of srv.") 
+
+        class_names = list(next(iter(dataDict.values()))[class_main_key].keys())
+        # Prepare for combined plotting 
+        n_traits = len(class_names) 
+        ncols = 2
+        nrows = math.ceil(n_traits / ncols)
+        output_dir = './data/figures/svr/' 
+        os.makedirs(output_dir, exist_ok=True)  # Ensure output directory exists
+
+        fig, axes = plt.subplots(nrows, ncols, figsize=(6*ncols, 5*nrows))
+        axes = axes.flatten()
+
+        for i, name in enumerate(class_names):  
+            print(name)
+            self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key    = self.tnt.make_training_n_test_sets(features_key, class_main_key, name) 
+            svr = self.get_svr_kernal(kernalType) 
+            svr.fit(self.x_train, self.y_train) 
+            y_pred_test = svr.predict(self.x_test)
+            ax = axes[i] 
+
+            # Map conditions to colors
+            unique_conditions = np.unique(self.cond_test)
+            color_map = {cond: cm.tab20(j / len(unique_conditions)) for j, cond in enumerate(unique_conditions)}
+            colors = [color_map[cond] for cond in self.cond_test]
+
+            scatter = ax.scatter(self.y_test, y_pred_test, c=colors, alpha=0.7, edgecolor="k", s=50)
+            min_val = min(np.min(self.y_test), np.min(y_pred_test))
+            max_val = max(np.max(self.y_test), np.max(y_pred_test))
+            ax.plot([min_val, max_val], [min_val, max_val], 'r--', lw=1)
+            r2 = r2_score(self.y_test, y_pred_test)
+            print(f"{name} score: {svr.score(self.x_test, self.y_test)}")
+            #r2_score(self.y_test, y_pred_test) and svr.score(self.x_test, self.y_test) produce smae results 
+            mse = mean_squared_error(self.y_test, y_pred_test)
+            ax.set_title(f"{name}\n$R^2$={r2:.3f}, MSE={mse:.2e}")
+            ax.set_xlabel("Actual")
+            ax.set_ylabel("Predicted") 
+
+            # Add legend for conditions
+            handles = [plt.Line2D([0], [0], marker='o', color='w', label=str(cond),
+                                markerfacecolor=color_map[cond], markersize=10)
+                    for cond in unique_conditions]
+            ax.legend(handles=handles, title="Condition", loc='best', fontsize=8)
+
+        # Hide unused axes if any
+        for j in range(i+1, len(axes)):
+            fig.delaxes(axes[j])
+
+        lable = features_key 
+        fig.suptitle(f"SVR {kernalType} Test Set Performance for All Traits using {lable} as features", fontsize=16)
+        fig.tight_layout(rect=[0, 0.03, 1, 0.95]) 
+        fig_path = f"{output_dir}svr_all_traits_{lable}_{kernalType}.png" 
+        fig.savefig(fig_path) 
+        print(f"Figure saved to: {fig_path}")  
+        plt.show() 
+        plt.close('all') 
+        plt.clf()  
+ 
+    """
