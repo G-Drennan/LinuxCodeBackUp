@@ -652,12 +652,12 @@ class C_Dession_trees:
 
 
 class C_gen_alg:
-    def __init__(self, dataDict, n_gen = 10): 
+    def __init__(self, dataDict, n_gen = 10, features_name = 'missing'): 
         self.model = None
         self.model_exists = False 
         self.dataDict = dataDict 
         self.tnt = C_Test_train_split(dataDict)
-        self.outPutPath = './data/ML/'
+        self.outPutPath = './data/ML/' + features_name +'_' 
         self.score_file_path = None 
         #create the output dir if it does not exist
         os.makedirs(self.outPutPath, exist_ok=True)   
@@ -671,7 +671,7 @@ class C_gen_alg:
 
         self.best_avg_fitness = 0 
 
-    def gen_alg_on_best_model(self, features_key, class_main_key, class_name, mutation_rate=0.20):  
+    def gen_alg_on_best_model(self, features_key, class_main_key, class_name, mutation_rate=0.20, min_feat=2, max_feat=25,):  
         print(f"run prediction on {class_main_key} : {class_name}")  
         
         #chromo_df_bc,score_bc=generations(data_bc,label_bc)
@@ -685,7 +685,7 @@ class C_gen_alg:
 
         n_feat = self.x_train.shape[1] 
         print(n_feat)  
-        best_chromo_x, best_score, avg_chromo_score = self.generations(n_feat=n_feat, mutation_rate=mutation_rate)     
+        best_chromo_x, best_score, avg_chromo_score = self.generations(n_feat=n_feat, mutation_rate=mutation_rate, min_feat=min_feat, max_feat=max_feat)      
         self.best_chromo_x_overall = max(zip(best_score, best_chromo_x), key=lambda x: x[0])[1]
  
         print("Best feature subset found:", np.where(self.best_chromo_x_overall)[0])
@@ -767,12 +767,20 @@ class C_gen_alg:
             print(best_chromo_x, best_score)  
             self.plot_gen_accuracies(score=av, x=min(av), y=max(av), class_name=class_name) 
 
-    def generations(self, n_feat, size=80, n_parents=64, mutation_rate=0.20, esitmate_next_gen_scores = True, estimated_scores = None):
+    def generations(self, n_feat,  min_feat=2, max_feat=25,  size=80, n_parents=64, mutation_rate=0.20, esitmate_next_gen_scores = True, estimated_scores = None):
         print("\nStart generations")
         self.best_avg_fitness = 0  
         best_chromo_x = []
         best_score = []
         avg_chromo_score = []  
+
+      
+        if n_feat < min_feat:
+            max_feat = n_feat
+            min_feat = round(n_feat/2)
+        self.min_feat = min_feat
+        self.max_feat = max_feat 
+        
 
         population_nextgen = self.initilization_of_population(size, n_feat)
 
@@ -805,18 +813,24 @@ class C_gen_alg:
 
 
     def initilization_of_population(self, size, n_feat, seed=None):
+
         print("Start initilization of population")
         # Use per-generation seed if provided, else fall back to self.np_rng
         if seed is not None:
             np_rng = np.random.default_rng(seed)
         else:
             np_rng = self.np_rng
+
         population = []
 
         for i in range(size):
             chromosome = np.ones(n_feat, dtype=bool)
-            chromosome[:int(0.3 * n_feat)] = False
-            np_rng.shuffle(chromosome)
+            #chromosome[:int(0.3 * n_feat)] = False
+            #np_rng.shuffle(chromosome)
+            n_active = np_rng.integers(self.min_feat, self.max_feat+1)
+            active_indices = np_rng.choice(n_feat, n_active, replace=False)
+            chromosome[active_indices] = True
+
             population.append(chromosome)
         return population
 
@@ -857,7 +871,7 @@ class C_gen_alg:
             new_child = np.concatenate((child_1[:len(child_1)//2], child_2[len(child_1)//2:]))
             pop_nextgen.append(new_child)
             parent_map.append((i, i+1))  # Track parent indices
- 
+        pop_next_gen = [self.enforce_feature_limits(chromo, self.min_feat, self.min_feat) for chromo in pop_next_gen]
         return pop_nextgen, parent_map    
 
 
@@ -897,11 +911,25 @@ class C_gen_alg:
             if should_mutate:
                 rand_posi = rand_posi_arr[idx]
                 for j in rand_posi:
-                    chromo[j] = not chromo[j]
+                    chromo[j] = not chromo[j] 
             pop_next_gen.append(chromo)
-
+        pop_next_gen = [self.enforce_feature_limits(chromo, self.min_feat, self.min_feat) for chromo in pop_next_gen]
         return pop_next_gen   
     
+    def enforce_feature_limits(self, chromosome, min_feat, max_feat):
+        active = np.where(chromosome)[0] 
+        n_active = len(active)
+        if n_active > max_feat:
+            # Randomly turn off excess features
+            to_disable = np.random.choice(active, n_active - max_feat, replace=False)
+            chromosome[to_disable] = False
+        elif n_active < min_feat:
+            # Randomly turn on more features
+            inactive = np.where(~chromosome)[0]
+            to_enable = np.random.choice(inactive, min_feat - n_active, replace=False)
+            chromosome[to_enable] = True
+        return chromosome
+
         
     def plot_gen_accuracies(self, score, x, y, class_name, c="b"):  # plot the generation accuracies.
         print("Plotting gen over time...")
