@@ -511,19 +511,19 @@ class C_Dession_trees:
             self.svr(model) 
         
         
-        self.r2_score, self.mse = self.my_accuracy_score()    
-        print(f"{self.models_dict[model]} R2: {self.r2_score:.2f}")
+        r2_test, mse_test,  r2_train, mse_train = self.my_accuracy_score()    
+        print(f"{self.models_dict[model]} R2: {r2_test:.2f}")  
         
         scores, cross_val_mean = self.cross_val()  
 
-        print(f"Cross-validation scores of {self.models_dict[model]}: {scores}")
-        print(f"Mean cross-validation score: {cross_val_mean:.2f}") 
+        #print(f"Cross-validation scores of {self.models_dict[model]}: {scores}")
+        print(f"Mean cross-validation score: {cross_val_mean:.2f}")  
 
                         
-                #plot the pred vs actual and the confusion matrix 
+        #plot the pred vs actual and the confusion matrix  
         self.plot_predict_vs_actual(class_name=class_name, model_name=self.models_dict[model], file_name_modifier=file_name_modifier) 
 
-        return self.model, self.r2_score, cross_val_mean  
+        return self.model, r2_test, mse_test,  r2_train, mse_train, cross_val_mean  
 
     def svr(self, model_key):
         kernel_map = {
@@ -585,10 +585,14 @@ class C_Dession_trees:
         return self.model#, self.accuracy
     
     def my_accuracy_score(self): 
-        mse = mean_squared_error(self.y_test, self.y_pred)
-        r2 = r2_score(self.y_test, self.y_pred)
+        mse_test = mean_squared_error(self.y_test, self.y_pred)
+        r2_test = r2_score(self.y_test, self.y_pred)
 
-        return r2, mse 
+        y_pred_train = self.model.predict(self.x_train) 
+        r2_train = r2_score(self.y_train, y_pred_train)
+        mse_train = mean_squared_error(self.y_train, y_pred_train)
+
+        return r2_test, mse_test,  r2_train, mse_train
     
     #Cross-validation test the models performance. 
     def cross_val(self, model = None, n_splits=10):
@@ -643,7 +647,7 @@ class C_Dession_trees:
         plt.tight_layout()
         plt.savefig(f"{self.output_dir}pred_vs_actual_for_{class_name}_{model_name}_{file_name_modifier}.png")  
         print(f"Figure saved to: {self.output_dir}pred_vs_actual_{model_name}.png")
-        plt.show()
+        #plt.show()
         plt.close() 
 
 
@@ -716,9 +720,9 @@ class C_gen_alg:
             f.write(f"Selected Features: {selected_features.tolist()}\n")
 
             for i, model_name in enumerate(model_obj.models): 
-                model, r2_score, cross_val_mean = model_obj.train_model(class_name, model_name, file_name_modifier='best_chromo')  
+                model, r2_test, mse_test,  r2_train, mse_train, cross_val_mean   = model_obj.train_model(class_name, model_name, file_name_modifier='best_chromo')  
 
-                f.write(f"{model_obj.models_dict[model_name]}: R2={r2_score:.2f}, Cross-val mean={cross_val_mean:.2f}\n")
+                f.write(f"{model_obj.models_dict[model_name]} Train:  R2={r2_train:.2f}, mse = {mse_train} \nTest R2={r2_test:.2f}, mse = {mse_test}, Cross-val mean={cross_val_mean:.2f}\n\n")
 
         print("Finished evaluating all models on best feature subset.")  
 
@@ -731,10 +735,10 @@ class C_gen_alg:
         for i, model_name in enumerate(model_obj.models): #        self.models = ["RF", "AB", "GB", "DT"] 
  
             #genetic feature selection, save best features from first run use for other runs for consistencey and comparision. 
-            model, r2_score, cross_val_mean  = model_obj.train_model(name, model_name, file_name_modifier='initial_run')
+            model,  r2_test, mse_test,  r2_train, mse_train, cross_val_mean    = model_obj.train_model(name, model_name, file_name_modifier='initial_run')
             #write the model and its score to a file
-            with open(f'{self.score_file_path}', 'a') as f:   
-                f.write(f"{model_obj.models_dict[model_name]}: R2={r2_score:.2f}, Cross-val mean={cross_val_mean:.2f}\n")
+            with open(f'{self.score_file_path}', 'a') as f:    
+                f.write(f"{model_obj.models_dict[model_name]} Train:  R2={r2_train:.2f}, mse = {mse_train} \nTest R2={r2_test:.2f}, mse = {mse_test}, Cross-val mean={cross_val_mean:.2f}\n\n")
 
             if cross_val_mean > max_cross_val_mean : #use cross_val_mean to find best model 
                 print(f"best model is currently {model_name}") 
@@ -985,7 +989,7 @@ class C_PCA:
         ax.set_title(f'PCA Clusters by {label_col}')
         #plt.tight_layout()  
         plt.savefig(f'{self.output_dir}pca_clusters_{self.feature_key}_sort_by_{self.sort_term_name}.png')
-        plt.show()
+        #plt.show() 
         plt.close() 
 
     
