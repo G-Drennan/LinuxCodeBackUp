@@ -1,0 +1,38 @@
+--- Model scores for features: Spectra ---
+Random Forest Train:  R2=0.95, mse = 0.02041308203080811 
+Test R2=0.72, mse = 0.12200081867662414, Cross-val mean=0.66
+
+Ada Boost Train:  R2=0.74, mse = 0.11299038049720106 
+Test R2=0.67, mse = 0.1440968044173007, Cross-val mean=0.63
+
+Gradient Boosting Train:  R2=0.90, mse = 0.041334844949068986 
+Test R2=0.71, mse = 0.12546841162230687, Cross-val mean=0.66
+
+Decision Tree Train:  R2=0.76, mse = 0.10368294606590987 
+Test R2=0.62, mse = 0.16530012739424463, Cross-val mean=0.54
+
+
+Gradient Boosting highest accuracy of 0.6579353906023294.
+
+--- Generation alg ---
+Predicting: Traits : Nitrogennum genrations: 30
+Best feature subset found: [  5  42  56  68  77  96 105 126 154 155 167 210 214 229 257 309 332 340
+ 352 366 377],
+ Best feature names: ['475' '660' '730' '790' '835' '930' '975' '1080' '1220' '1225' '1285'
+ '1500' '1520' '1595' '1735' '1995' '2110' '2150' '2210' '2280' '2335'],
+ Corresponding R2: 0.7292790720176638
+
+--- Performance on Best Chromosome Feature Subset ---
+Selected Features: ['475', '660', '730', '790', '835', '930', '975', '1080', '1220', '1225', '1285', '1500', '1520', '1595', '1735', '1995', '2110', '2150', '2210', '2280', '2335']
+Random Forest Train:  R2=0.95, mse = 0.020430357998752705 
+Test R2=0.72, mse = 0.12302373575768481, Cross-val mean=0.66
+
+Ada Boost Train:  R2=0.70, mse = 0.12848454395175432 
+Test R2=0.67, mse = 0.14347883759376007, Cross-val mean=0.62
+
+Gradient Boosting Train:  R2=0.87, mse = 0.05686846182656891 
+Test R2=0.74, mse = 0.11141068263007597, Cross-val mean=0.65
+
+Decision Tree Train:  R2=0.75, mse = 0.10908484134858977 
+Test R2=0.63, mse = 0.16156231784009478, Cross-val mean=0.57
+

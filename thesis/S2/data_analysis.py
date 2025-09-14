@@ -384,9 +384,80 @@ class C_analysis:
         plt.show()
         plt.close()
         print(f"Covariance matrix saved to {self.output_dir_covariance}covariance_matrix_{filenames_key_1}_and_{filenames_key_2}.png") 
+    
 
+class C_PCA: 
+    def __init__(self, dataDict, sort_key,  feature_key='Hs_Traits'): 
+        dictManager = C_Dict_manager(dataDict) 
+        self.sortedDataDict = dictManager.separate_dict_by_value(sort_key, filenames_keys[1]) #separate the dict by genotype 
+        self.feature_key = feature_key 
+        self.sort_term_name = sort_key
+        self.output_dir = "./data/pca/"  
+        
+        self.sorted_dict_to_dataframe()
+        
 
+    def sorted_dict_to_dataframe(self):
+        rows = []
+        for condition, samples in self.sortedDataDict.items(): 
+            for sample_id, sample_data in samples.items():
+                features = sample_data.get(self.feature_key, {})
+                row = {'ID': sample_id, self.sort_term_name: condition}  
+                row.update(features)
+                rows.append(row)
+        self.df =  pd.DataFrame(rows)
+        #save the data frame
+        output_dir_csv = './data/'  
+        os.makedirs(output_dir_csv, exist_ok=True)    
+        self.df.to_csv(f'{output_dir_csv}pca_input_dataframe_{self.feature_key}_sort_by_{self.sort_term_name}.csv', index=False)
 
+    def plot_pcs_pairplot(self):
+        feature_cols = self.df.columns[2:].tolist()  # exclude ID and sort_key
+        label_col = self.sort_term_name 
+
+        sns.set_theme(style="ticks") 
+        pairplot = sns.pairplot(self.df, vars=feature_cols, hue=label_col, palette='tab10', diag_kind='hist')
+
+        pairplot.figure.suptitle(f'Pairplot of Features Colored by {label_col}', y=1.02) 
+        plt.tight_layout()
+
+        os.makedirs(self.output_dir, exist_ok=True)
+        pairplot.savefig(f'{self.output_dir}pairplot_features_{self.feature_key}_sort_by_{self.sort_term_name}.png')
+        plt.show()
+        plt.close()
+
+    def plot_pca_clusters(self): 
+
+        #assume teh feature cols always exclude the first 2 and the rest are included
+        feature_cols = self.df.columns[2:].tolist() 
+        label_col = self.sort_term_name  
+        pca = PCA(n_components=2)
+        X_pca = pca.fit_transform(self.df[feature_cols])
+        self.df['PC1'], self.df['PC2'] = X_pca[:, 0], X_pca[:, 1]
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+        colors = plt.colormaps['tab10'] 
+
+        for i, condition in enumerate(self.df[label_col].unique()):
+            subset = self.df[self.df[label_col] == condition]
+            ax.scatter(subset['PC1'], subset['PC2'], label=condition, color=colors(i), alpha=0.6)
+
+            if len(subset) >= 3:
+                points = subset[['PC1', 'PC2']].values
+                hull = ConvexHull(points)
+                hull_pts = points[hull.vertices]
+                ax.plot(*zip(*np.append(hull_pts, [hull_pts[0]], axis=0)), color=colors(i), lw=2)
+
+        ax.set_xlabel('PC1')
+        ax.set_ylabel('PC2')
+        ax.legend()
+        ax.set_title(f'PCA Clusters by {label_col}')
+        #plt.tight_layout()  
+        plt.savefig(f'{self.output_dir}pca_clusters_{self.feature_key}_sort_by_{self.sort_term_name}.png')
+        #plt.show() 
+        plt.close() 
+
+    
 
 
 #~~~~~~~~~~~~~~~~~~~~~ Regressors ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
@@ -657,7 +728,7 @@ class C_gen_alg:
         self.model_exists = False 
         self.dataDict = dataDict 
         self.tnt = C_Test_train_split(dataDict)
-        self.outPutPath = './data/ML/' + features_name +'_' 
+        self.outPutPath = f'./data/ML/{features_name}/'  
         self.score_file_path = None 
         #create the output dir if it does not exist
         os.makedirs(self.outPutPath, exist_ok=True)   
@@ -671,7 +742,7 @@ class C_gen_alg:
 
         self.best_avg_fitness = 0 
 
-    def gen_alg_on_best_model(self, features_key, class_main_key, class_name, mutation_rate=0.20, min_feat=2, max_feat=25,):  
+    def gen_alg_on_best_model(self, features_key, class_main_key, class_name, mutation_rate=0.20, min_feat=2, max_feat=25):  
         print(f"run prediction on {class_main_key} : {class_name}")  
         
         #chromo_df_bc,score_bc=generations(data_bc,label_bc)
@@ -757,14 +828,12 @@ class C_gen_alg:
         print("testing...") 
         self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key  = self.tnt.make_training_n_test_sets(features_key, class_main_key, class_name)
         model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test,  output_dir=self.outPutPath) 
-        self.model, r2_score, cross_val_mean  = model_obj.train_model(class_name, model_name)    
-        
+        self.model, r2_test, mse_test,  r2_train, mse_train, cross_val_mean  = model_obj.train_model(class_name, model_name, features_key)     
 
-        
-        if run_gen_test: 
+        if run_gen_test:  
             n_feat = self.x_train.shape[1] 
             best_chromo_x, best_score, av = self.generations(n_feat=n_feat)    
-            print(best_chromo_x, best_score)  
+            #print(best_chromo_x, best_score)   
             self.plot_gen_accuracies(score=av, x=min(av), y=max(av), class_name=class_name) 
 
     def generations(self, n_feat,  min_feat=2, max_feat=25,  size=80, n_parents=64, mutation_rate=0.20, esitmate_next_gen_scores = True, estimated_scores = None):
@@ -809,6 +878,7 @@ class C_gen_alg:
             population_nextgen = self.mutation(pop_after_cross, mutation_rate, n_feat, fitness_scores=estimated_scores, seed=gen_seed)
             best_chromo_x.append(best_chromo)
             best_score.append(best_chromo_score) 
+        
         return best_chromo_x, best_score, avg_chromo_score 
 
 
@@ -824,7 +894,7 @@ class C_gen_alg:
         population = []
 
         for i in range(size):
-            chromosome = np.ones(n_feat, dtype=bool)
+            chromosome = np.zeros(n_feat, dtype=bool) 
             #chromosome[:int(0.3 * n_feat)] = False
             #np_rng.shuffle(chromosome)
             n_active = np_rng.integers(self.min_feat, self.max_feat+1)
@@ -832,6 +902,10 @@ class C_gen_alg:
             chromosome[active_indices] = True
 
             population.append(chromosome)
+        #print the largest pop individual 
+        largest_individual = max(population, key=lambda x: np.sum(x))
+        print(f"Largest individual has {np.sum(largest_individual)} features selected.") 
+
         return population
 
     def fitness_score(self, population, use_cross_val = False):
@@ -871,7 +945,12 @@ class C_gen_alg:
             new_child = np.concatenate((child_1[:len(child_1)//2], child_2[len(child_1)//2:]))
             pop_nextgen.append(new_child)
             parent_map.append((i, i+1))  # Track parent indices
-        pop_next_gen = [self.enforce_feature_limits(chromo, self.min_feat, self.min_feat) for chromo in pop_next_gen]
+        
+        pop_nextgen = [self.enforce_feature_limits(chromo, self.min_feat, self.max_feat) for chromo in pop_nextgen]
+
+        largest_individual = max(pop_nextgen, key=lambda x: np.sum(x)) 
+        print(f"Largest individual has {np.sum(largest_individual)} features selected.") 
+
         return pop_nextgen, parent_map    
 
 
@@ -912,9 +991,13 @@ class C_gen_alg:
                 rand_posi = rand_posi_arr[idx]
                 for j in rand_posi:
                     chromo[j] = not chromo[j] 
-            pop_next_gen.append(chromo)
-        pop_next_gen = [self.enforce_feature_limits(chromo, self.min_feat, self.min_feat) for chromo in pop_next_gen]
-        return pop_next_gen   
+            pop_next_gen.append(chromo) 
+        pop_next_gen = [self.enforce_feature_limits(chromo, self.min_feat, self.max_feat) for chromo in pop_next_gen]
+        
+        largest_individual = max(pop_next_gen, key=lambda x: np.sum(x))
+        print(f"Largest individual has {np.sum(largest_individual)} features selected.") 
+        
+        return pop_next_gen    
     
     def enforce_feature_limits(self, chromosome, min_feat, max_feat):
         active = np.where(chromosome)[0] 
@@ -930,7 +1013,6 @@ class C_gen_alg:
             chromosome[to_enable] = True
         return chromosome
 
-        
     def plot_gen_accuracies(self, score, x, y, class_name, c="b"):  # plot the generation accuracies.
         print("Plotting gen over time...")
         gen = list(range(1, self.n_gen + 1))
@@ -947,81 +1029,7 @@ class C_gen_alg:
         plt.show()
         plt.close()
         #save the plot
-    
-         
-
-class C_PCA: 
-    def __init__(self, dataDict, sort_key,  feature_key='Hs_Traits'): 
-        dictManager = C_Dict_manager(dataDict) 
-        self.sortedDataDict = dictManager.separate_dict_by_value(sort_key, filenames_keys[1]) #separate the dict by genotype 
-        self.feature_key = feature_key 
-        self.sort_term_name = sort_key
-        self.output_dir = "./data/pca/"  
-        
-        self.sorted_dict_to_dataframe()
-        
-
-    def sorted_dict_to_dataframe(self):
-        rows = []
-        for condition, samples in self.sortedDataDict.items(): 
-            for sample_id, sample_data in samples.items():
-                features = sample_data.get(self.feature_key, {})
-                row = {'ID': sample_id, self.sort_term_name: condition}  
-                row.update(features)
-                rows.append(row)
-        self.df =  pd.DataFrame(rows)
-        #save the data frame
-        output_dir_csv = './data/'  
-        os.makedirs(output_dir_csv, exist_ok=True)    
-        self.df.to_csv(f'{output_dir_csv}pca_input_dataframe_{self.feature_key}_sort_by_{self.sort_term_name}.csv', index=False)
-
-    def plot_pcs_pairplot(self):
-        feature_cols = self.df.columns[2:].tolist()  # exclude ID and sort_key
-        label_col = self.sort_term_name 
-
-        sns.set_theme(style="ticks") 
-        pairplot = sns.pairplot(self.df, vars=feature_cols, hue=label_col, palette='tab10', diag_kind='hist')
-
-        pairplot.figure.suptitle(f'Pairplot of Features Colored by {label_col}', y=1.02) 
-        plt.tight_layout()
-
-        os.makedirs(self.output_dir, exist_ok=True)
-        pairplot.savefig(f'{self.output_dir}pairplot_features_{self.feature_key}_sort_by_{self.sort_term_name}.png')
-        plt.show()
-        plt.close()
-
-    def plot_pca_clusters(self): 
-
-        #assume teh feature cols always exclude the first 2 and the rest are included
-        feature_cols = self.df.columns[2:].tolist() 
-        label_col = self.sort_term_name  
-        pca = PCA(n_components=2)
-        X_pca = pca.fit_transform(self.df[feature_cols])
-        self.df['PC1'], self.df['PC2'] = X_pca[:, 0], X_pca[:, 1]
-
-        fig, ax = plt.subplots(figsize=(8, 6))
-        colors = plt.colormaps['tab10'] 
-
-        for i, condition in enumerate(self.df[label_col].unique()):
-            subset = self.df[self.df[label_col] == condition]
-            ax.scatter(subset['PC1'], subset['PC2'], label=condition, color=colors(i), alpha=0.6)
-
-            if len(subset) >= 3:
-                points = subset[['PC1', 'PC2']].values
-                hull = ConvexHull(points)
-                hull_pts = points[hull.vertices]
-                ax.plot(*zip(*np.append(hull_pts, [hull_pts[0]], axis=0)), color=colors(i), lw=2)
-
-        ax.set_xlabel('PC1')
-        ax.set_ylabel('PC2')
-        ax.legend()
-        ax.set_title(f'PCA Clusters by {label_col}')
-        #plt.tight_layout()  
-        plt.savefig(f'{self.output_dir}pca_clusters_{self.feature_key}_sort_by_{self.sort_term_name}.png')
-        #plt.show() 
-        plt.close() 
-
-    
+ 
 if __name__ == '__main__':    
     print("GO...")
     filenames = [
@@ -1047,18 +1055,18 @@ if __name__ == '__main__':
     sort_key = 'Conditions' 
     dictManager.write_dict_to_file(dataDict, "original")   
     
-    ga = C_gen_alg(dataDict, n_gen = 30)             
+    ga = C_gen_alg(dataDict, n_gen = 30, features_name=filenames_keys[4])  #Spectra              
     class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
     print(class_names)
     class_names = [f for f in class_names if 'Leaf' not in f]
-    print(class_names) #remove leaf from traits.  
+    print(class_names) #remove leaf from traits.   
 
-    #ga.test_set_model(filenames_keys[3], filenames_keys[2], class_names[3])   
+    #ga.test_set_model(filenames_keys[4], filenames_keys[2], class_names[3])   
   
 
-    for class_name in class_names:  
+    for class_name in class_names:   
         print(f"\nNew model {class_name}")   
-        ga.gen_alg_on_best_model(filenames_keys[3], filenames_keys[2], class_name) #predicting     
+        ga.gen_alg_on_best_model(filenames_keys[4], filenames_keys[2], class_name, min_feat=2, max_feat=25) #predicting      
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ junk ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 

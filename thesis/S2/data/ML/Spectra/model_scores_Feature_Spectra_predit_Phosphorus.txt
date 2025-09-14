@@ -1,0 +1,38 @@
+--- Model scores for features: Spectra ---
+Random Forest Train:  R2=0.89, mse = 0.000936517553948577 
+Test R2=0.14, mse = 0.006411482213039486, Cross-val mean=0.15
+
+Ada Boost Train:  R2=0.37, mse = 0.005132043211174467 
+Test R2=-0.06, mse = 0.007857380094984667, Cross-val mean=0.00
+
+Gradient Boosting Train:  R2=0.78, mse = 0.0017954040974189904 
+Test R2=0.08, mse = 0.0067937223651131536, Cross-val mean=0.12
+
+Decision Tree Train:  R2=0.56, mse = 0.003569303796202666 
+Test R2=-0.10, mse = 0.008142646594520332, Cross-val mean=-0.15
+
+
+Random Forest highest accuracy of 0.1486126234220003.
+
+--- Generation alg ---
+Predicting: Traits : Phosphorusnum genrations: 30
+Best feature subset found: [  1  15  85 147 149 205 217 218 230 234 240 248 253 261 273 287 288 349
+ 365 376],
+ Best feature names: ['455' '525' '875' '1185' '1195' '1475' '1535' '1540' '1600' '1620' '1650'
+ '1690' '1715' '1755' '1815' '1885' '1890' '2195' '2275' '2330'],
+ Corresponding R2: 0.1889051514947382
+
+--- Performance on Best Chromosome Feature Subset ---
+Selected Features: ['455', '525', '875', '1185', '1195', '1475', '1535', '1540', '1600', '1620', '1650', '1690', '1715', '1755', '1815', '1885', '1890', '2195', '2275', '2330']
+Random Forest Train:  R2=0.87, mse = 0.001023779804866851 
+Test R2=0.22, mse = 0.005819860985996325, Cross-val mean=0.11
+
+Ada Boost Train:  R2=0.20, mse = 0.006511768666036964 
+Test R2=-0.10, mse = 0.008192705686812005, Cross-val mean=-0.15
+
+Gradient Boosting Train:  R2=0.66, mse = 0.0027475451104988294 
+Test R2=0.20, mse = 0.005945811786864903, Cross-val mean=0.08
+
+Decision Tree Train:  R2=0.39, mse = 0.005008213739623717 
+Test R2=0.06, mse = 0.006991656597151065, Cross-val mean=-0.11
+

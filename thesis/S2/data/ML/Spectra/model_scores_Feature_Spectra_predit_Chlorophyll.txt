@@ -1,0 +1,38 @@
+--- Model scores for features: Spectra ---
+Random Forest Train:  R2=0.99, mse = 150.60242326830692 
+Test R2=0.91, mse = 999.3813513930988, Cross-val mean=0.90
+
+Ada Boost Train:  R2=0.91, mse = 1009.9022386093072 
+Test R2=0.88, mse = 1382.9582826427793, Cross-val mean=0.87
+
+Gradient Boosting Train:  R2=0.98, mse = 258.5966891062974 
+Test R2=0.91, mse = 999.7538418847995, Cross-val mean=0.91
+
+Decision Tree Train:  R2=0.91, mse = 985.618803634754 
+Test R2=0.82, mse = 1967.4534063834913, Cross-val mean=0.84
+
+
+Gradient Boosting highest accuracy of 0.9116750625518566.
+
+--- Generation alg ---
+Predicting: Traits : Chlorophyllnum genrations: 30
+Best feature subset found: [  2   5  31  38  53  73  94  96 109 127 137 146 182 212 289 309 328 347
+ 388 400],
+ Best feature names: ['460' '475' '605' '640' '715' '815' '920' '930' '995' '1085' '1135'
+ '1180' '1360' '1510' '1895' '1995' '2090' '2185' '2390' '2450'],
+ Corresponding R2: 0.9186128682067174
+
+--- Performance on Best Chromosome Feature Subset ---
+Selected Features: ['460', '475', '605', '640', '715', '815', '920', '930', '995', '1085', '1135', '1180', '1360', '1510', '1895', '1995', '2090', '2185', '2390', '2450']
+Random Forest Train:  R2=0.99, mse = 154.3623407116667 
+Test R2=0.91, mse = 989.5168553068594, Cross-val mean=0.90
+
+Ada Boost Train:  R2=0.91, mse = 1049.6575498782759 
+Test R2=0.88, mse = 1339.387997214901, Cross-val mean=0.87
+
+Gradient Boosting Train:  R2=0.97, mse = 371.0006091468286 
+Test R2=0.92, mse = 873.2248496219113, Cross-val mean=0.90
+
+Decision Tree Train:  R2=0.91, mse = 1079.0035517524816 
+Test R2=0.86, mse = 1578.2160663834659, Cross-val mean=0.83
+

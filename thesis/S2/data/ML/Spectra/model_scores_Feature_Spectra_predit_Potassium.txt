@@ -1,0 +1,39 @@
+--- Model scores for features: Spectra ---
+Random Forest Train:  R2=0.89, mse = 0.02067342132809916 
+Test R2=0.15, mse = 0.15756989875470045, Cross-val mean=0.20
+
+Ada Boost Train:  R2=0.45, mse = 0.10744115697396764 
+Test R2=0.04, mse = 0.17686219370904466, Cross-val mean=0.18
+
+Gradient Boosting Train:  R2=0.78, mse = 0.043672431915011654 
+Test R2=0.14, mse = 0.1590822088274107, Cross-val mean=0.19
+
+Decision Tree Train:  R2=0.43, mse = 0.11067234440050283 
+Test R2=0.02, mse = 0.18177008585121623, Cross-val mean=-0.02
+
+
+Random Forest highest accuracy of 0.20259928994063853.
+
+--- Generation alg ---
+Predicting: Traits : Potassiumnum genrations: 30
+Best feature subset found: [ 10  39  45  59 107 116 158 172 190 191 195 208 211 228 266 267 284 312
+ 353 368 372 380 397],
+ Best feature names: ['500' '645' '675' '745' '985' '1030' '1240' '1310' '1400' '1405' '1425'
+ '1490' '1505' '1590' '1780' '1785' '1870' '2010' '2215' '2290' '2310'
+ '2350' '2435'],
+ Corresponding R2: 0.1663654509954957
+
+--- Performance on Best Chromosome Feature Subset ---
+Selected Features: ['500', '645', '675', '745', '985', '1030', '1240', '1310', '1400', '1405', '1425', '1490', '1505', '1590', '1780', '1785', '1870', '2010', '2215', '2290', '2310', '2350', '2435']
+Random Forest Train:  R2=0.89, mse = 0.020572052888911837 
+Test R2=0.20, mse = 0.14809747438450419, Cross-val mean=0.20
+
+Ada Boost Train:  R2=0.40, mse = 0.11804811271735781 
+Test R2=0.10, mse = 0.1672159217069393, Cross-val mean=0.13
+
+Gradient Boosting Train:  R2=0.71, mse = 0.056669221923771634 
+Test R2=0.17, mse = 0.15305327938592841, Cross-val mean=0.19
+
+Decision Tree Train:  R2=0.43, mse = 0.11190265767659952 
+Test R2=-0.05, mse = 0.19333384745264043, Cross-val mean=-0.08
+
