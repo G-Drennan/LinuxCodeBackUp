@@ -48,6 +48,10 @@ from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, A
 from sklearn.tree import DecisionTreeRegressor 
 from sklearn.model_selection import cross_val_score
 
+from sklearn.feature_selection import SequentialFeatureSelector
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.datasets import load_iris
+
  
 
 class C_Data:
@@ -721,6 +725,100 @@ class C_Dession_trees:
         #plt.show()
         plt.close() 
 
+class C_SFS:
+    def __init__(self,  dataDict, features_name = 'missing'): 
+        self.model = None
+        self.model_exists = False 
+        self.dataDict = dataDict 
+        self.tnt = C_Test_train_split(dataDict)
+        self.outPutPath = f'./data/ML_SFS/{features_name}/' 
+        self.score_file_path = None   
+    
+    def run_sfs(self, features_key, class_main_key, class_name, n_features_to_select=5):  
+        self.feature_names = np.array(self.tnt.extract_features(features_key)[1])  
+        print(f"run SFS on {class_main_key} : {class_name}")  
+        self.score_file_path = os.path.join(self.outPutPath, f'model_scores_Feature_{features_key}_predit_{class_name}.txt')        #create the file  
+        #whipe the file if it exists
+        with open(f'{self.score_file_path}', 'w') as f:
+            f.write(f"--- Model scores for features: {features_key} ---\n")  
+        
+        self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key  = self.tnt.make_training_n_test_sets(features_key, class_main_key, class_name) 
+         
+        #model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, output_dir=self.outPutPath) 
+        #model = model_obj.train_model(class_name, model_name="RF", file_name_modifier='SFS_initial_run')[0]
+        model = self.find_best_model(features_key, class_main_key,class_name)   
+
+        sfs = SequentialFeatureSelector(model, n_features_to_select=n_features_to_select, direction='forward', scoring='r2', cv=10) 
+        sfs.fit(self.x_train, self.y_train)
+        #extract the selected feature indices
+
+
+        self.selected_features = sfs.get_support(indices=True)
+        print(self.selected_features)
+        #print("Selected feature indices:", selected_features)
+        #print("Selected feature names:", [keys[i] for i in selected_features])
+        #write selected features to score file
+        with open(f'{self.score_file_path}', 'a') as f:
+            f.write(f"\n--- Sequential Feature Selection ---\n") 
+            f.write(f"Predicting: {class_main_key} : {class_name}\n")  
+            f.write(f"Selected feature indices: {self.selected_features},\n Selected feature names: {[keys[i] for i in selected_features]}\n")
+        
+        #now run the models again with only the selected features
+        self.run_best_features_on_other_ML(features_key, class_main_key, class_name) 
+
+        return self.selected_features 
+    
+    def run_best_features_on_other_ML(self, features_key, class_main_key, class_name): 
+        print("run best features on other ML") 
+        selected_indices = np.where(self.selected_features)[0]
+        
+        selected_features = self.feature_names[self.selected_features]
+
+        # Subset the data to selected features
+        self.x_train = self.x_train[:, selected_indices]
+        self.x_test = self.x_test[:, selected_indices]  
+
+        # Train and evaluate all models on selected features
+        model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, output_dir=self.outPutPath)
+        with open(f'{self.score_file_path}', 'a') as f: 
+            f.write("\n--- Performance on Best Feature Subset ---\n")
+            f.write(f"Selected Features: {selected_features.tolist()}\n")
+
+            for i, model_name in enumerate(model_obj.models): 
+                model, r2_test, mse_test,  r2_train, mse_train, cross_val_mean   = model_obj.train_model(class_name, model_name, file_name_modifier='SFS_best_features')   
+
+                f.write(f"{model_obj.models_dict[model_name]} Train:  R2={r2_train:.2f}, mse = {mse_train} \nTest R2={r2_test:.2f}, mse = {mse_test}, Cross-val mean={cross_val_mean:.2f}\n\n")
+
+        print("Finished evaluating all models on best feature subset.")  
+
+    
+    def find_best_model(self, features_key, class_main_key, name):  
+        print("find best model")
+        max_cross_val_mean = 0
+
+        model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, output_dir=self.outPutPath) 
+        for i, model_name in enumerate(model_obj.models): #        self.models = ["RF", "AB", "GB", "DT"] 
+ 
+            #genetic feature selection, save best features from first run use for other runs for consistencey and comparision. 
+            model,  r2_test, mse_test,  r2_train, mse_train, cross_val_mean    = model_obj.train_model(name, model_name, file_name_modifier='initial_run')
+            #write the model and its score to a file
+            with open(f'{self.score_file_path}', 'a') as f:    
+                f.write(f"{model_obj.models_dict[model_name]} Train:  R2={r2_train:.2f}, mse = {mse_train} \nTest R2={r2_test:.2f}, mse = {mse_test}, Cross-val mean={cross_val_mean:.2f}\n\n")
+
+            if cross_val_mean > max_cross_val_mean : #use cross_val_mean to find best model 
+                print(f"best model is currently {model_name}") 
+                max_cross_val_mean = cross_val_mean
+                self.model = model
+                self.model_exists = True  
+                best_model_name = model_name    
+     
+        print(f"{model_obj.models_dict[best_model_name]} highest accuracy of {max_cross_val_mean}.") 
+        with open(f'{self.score_file_path}', 'a') as f: 
+            f.write(f"\n{model_obj.models_dict[best_model_name]} highest accuracy of {max_cross_val_mean}.\n")  
+        self.best_model_name = model_obj.models_dict[best_model_name] 
+        
+    
+
 
 class C_gen_alg:
     def __init__(self, dataDict, n_gen = 10, features_name = 'missing'): 
@@ -865,7 +963,7 @@ class C_gen_alg:
             avg_chromo_score.append(avg_score)
             print(f"Average score in generation {i+1}: {avg_score:.4f}")
 
-            pop_after_sel = self.selection(pop_after_fit, n_parents)
+            pop_after_sel = self.selection(pop_after_fit, n_parents, scores)
             pop_after_cross, parent_map = self.crossover(pop_after_sel) 
 
             if esitmate_next_gen_scores:
@@ -932,7 +1030,7 @@ class C_gen_alg:
         print("selection")
         population_nextgen = []
         for i in range(n_parents):
-            population_nextgen.append(pop_after_fit[i])
+            population_nextgen.append(pop_after_fit[i]) 
         return population_nextgen 
 
     def crossover(self, pop_after_sel):
@@ -1054,19 +1152,24 @@ if __name__ == '__main__':
     # Ploting spectra based off conditions
     sort_key = 'Conditions' 
     dictManager.write_dict_to_file(dataDict, "original")   
-    
+    """
     ga = C_gen_alg(dataDict, n_gen = 30, features_name=filenames_keys[4])  #Spectra              
     class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
     print(class_names)
     class_names = [f for f in class_names if 'Leaf' not in f]
     print(class_names) #remove leaf from traits.   
+    """
 
-    #ga.test_set_model(filenames_keys[4], filenames_keys[2], class_names[3])   
-  
+    sfs = C_SFS(dataDict, features_name=filenames_keys[4])  #Spectra            
+    class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
+    print(class_names)
+    class_names = [f for f in class_names if 'Leaf' not in f]
+    print(class_names) #remove leaf from traits.  
 
     for class_name in class_names:   
-        print(f"\nNew model {class_name}")   
-        ga.gen_alg_on_best_model(filenames_keys[4], filenames_keys[2], class_name, min_feat=2, max_feat=25) #predicting      
+        print(f"\nNew model {class_name}")    
+        sfs.run_sfs(features_key=filenames_keys[4], class_main_key=filenames_keys[2], class_name=class_name)  #Spectra
+        break
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ junk ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 
