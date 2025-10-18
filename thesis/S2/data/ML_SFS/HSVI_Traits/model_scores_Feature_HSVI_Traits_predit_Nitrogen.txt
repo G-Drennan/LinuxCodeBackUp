@@ -1,0 +1,35 @@
+--- Model scores for features: HSVI_Traits ---
+Random Forest Train:  R2=0.96, mse = 0.0193554338493313 
+Test R2=0.72, mse = 0.12288971649503501, Cross-val mean=0.68
+
+Ada Boost Train:  R2=0.73, mse = 0.11442963723196814 
+Test R2=0.67, mse = 0.1453890557262628, Cross-val mean=0.63
+
+Gradient Boosting Train:  R2=0.89, mse = 0.048616442094787306 
+Test R2=0.70, mse = 0.1308684581991435, Cross-val mean=0.67
+
+Decision Tree Train:  R2=0.77, mse = 0.10052228712744825 
+Test R2=0.57, mse = 0.1849253723621363, Cross-val mean=0.58
+
+
+Random Forest highest accuracy of 0.6756036621644178.
+
+--- Sequential Feature Selection ---
+Predicting: Traits : Nitrogen
+Selected feature indices: [ 1  2  7  9 11],
+ Selected feature names: ['Chl index', 'WI', 'DWSI2', 'DWSI4', 'ChlDela']
+
+--- Performance on Best Feature Subset ---
+Selected Features: ['Chl index', 'WI', 'DWSI2', 'DWSI4', 'ChlDela']
+Random Forest Train:  R2=0.95, mse = 0.020070084399391664 
+Test R2=0.68, mse = 0.13761496821712008, Cross-val mean=0.67
+
+Ada Boost Train:  R2=0.70, mse = 0.12849326351418933 
+Test R2=0.66, mse = 0.14595401970179506, Cross-val mean=0.62
+
+Gradient Boosting Train:  R2=0.84, mse = 0.06981311003103804 
+Test R2=0.70, mse = 0.13095912276021276, Cross-val mean=0.66
+
+Decision Tree Train:  R2=0.76, mse = 0.10297208799126692 
+Test R2=0.65, mse = 0.15352075866138737, Cross-val mean=0.63
+

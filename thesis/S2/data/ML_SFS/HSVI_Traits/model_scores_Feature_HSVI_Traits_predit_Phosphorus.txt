@@ -1,0 +1,35 @@
+--- Model scores for features: HSVI_Traits ---
+Random Forest Train:  R2=0.89, mse = 0.000934673055860086 
+Test R2=0.19, mse = 0.005986685555660969, Cross-val mean=0.16
+
+Ada Boost Train:  R2=0.42, mse = 0.004721692753454031 
+Test R2=0.02, mse = 0.007288431716280727, Cross-val mean=0.06
+
+Gradient Boosting Train:  R2=0.77, mse = 0.001855389182055331 
+Test R2=0.12, mse = 0.006532970523004624, Cross-val mean=0.16
+
+Decision Tree Train:  R2=0.50, mse = 0.004112241780044891 
+Test R2=0.08, mse = 0.006838214296926344, Cross-val mean=0.02
+
+
+Gradient Boosting highest accuracy of 0.16229399115055793.
+
+--- Sequential Feature Selection ---
+Predicting: Traits : Phosphorus
+Selected feature indices: [ 4  7 11 17 20],
+ Selected feature names: ['NRI1510', 'DWSI2', 'ChlDela', 'IPVI', 'RENDVI']
+
+--- Performance on Best Feature Subset ---
+Selected Features: ['NRI1510', 'DWSI2', 'ChlDela', 'IPVI', 'RENDVI']
+Random Forest Train:  R2=0.89, mse = 0.0009038476893861319 
+Test R2=0.06, mse = 0.007005819219900771, Cross-val mean=0.17
+
+Ada Boost Train:  R2=0.19, mse = 0.006638766177762146 
+Test R2=-0.20, mse = 0.008910441636040467, Cross-val mean=-0.01
+
+Gradient Boosting Train:  R2=0.68, mse = 0.002605149180810421 
+Test R2=0.07, mse = 0.006913345789064343, Cross-val mean=0.17
+
+Decision Tree Train:  R2=0.46, mse = 0.0044018231267101806 
+Test R2=-0.17, mse = 0.008691447307632959, Cross-val mean=0.02
+

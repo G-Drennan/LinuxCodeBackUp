@@ -1,0 +1,35 @@
+--- Model scores for features: HSVI_Traits ---
+Random Forest Train:  R2=0.90, mse = 0.020100868453546833 
+Test R2=0.19, mse = 0.14948917225242767, Cross-val mean=0.23
+
+Ada Boost Train:  R2=0.48, mse = 0.10097659832997764 
+Test R2=0.13, mse = 0.16162351410277784, Cross-val mean=0.18
+
+Gradient Boosting Train:  R2=0.72, mse = 0.054150885939947296 
+Test R2=0.19, mse = 0.14973801078224638, Cross-val mean=0.22
+
+Decision Tree Train:  R2=0.48, mse = 0.10091783831619859 
+Test R2=0.05, mse = 0.17650405969855051, Cross-val mean=0.06
+
+
+Random Forest highest accuracy of 0.2259112642989185.
+
+--- Sequential Feature Selection ---
+Predicting: Traits : Potassium
+Selected feature indices: [ 9 12 13 22 23],
+ Selected feature names: ['DWSI4', 'WBI', 'RDVI', 'NDNI', 'NDLI']
+
+--- Performance on Best Feature Subset ---
+Selected Features: ['DWSI4', 'WBI', 'RDVI', 'NDNI', 'NDLI']
+Random Forest Train:  R2=0.89, mse = 0.020807297108809807 
+Test R2=0.20, mse = 0.14737288080271232, Cross-val mean=0.23
+
+Ada Boost Train:  R2=0.41, mse = 0.1143781630189401 
+Test R2=0.13, mse = 0.16088311115352877, Cross-val mean=0.18
+
+Gradient Boosting Train:  R2=0.64, mse = 0.07111546751996278 
+Test R2=0.18, mse = 0.1522228547423017, Cross-val mean=0.23
+
+Decision Tree Train:  R2=0.47, mse = 0.10323188265583559 
+Test R2=0.08, mse = 0.170034593335795, Cross-val mean=0.14
+

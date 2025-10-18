@@ -1,0 +1,15 @@
+--- Model scores for features: Spectra ---
+Random Forest Train:  R2=0.95, mse = 0.020026776979994304 
+Test R2=0.72, mse = 0.12357244387717327, Cross-val mean=0.66
+
+Ada Boost Train:  R2=0.74, mse = 0.11171636365768105 
+Test R2=0.66, mse = 0.1473243007425944, Cross-val mean=0.63
+
+Gradient Boosting Train:  R2=0.90, mse = 0.04133484494906899 
+Test R2=0.71, mse = 0.12431887890079894, Cross-val mean=0.66
+
+Decision Tree Train:  R2=0.76, mse = 0.10368294606590987 
+Test R2=0.64, mse = 0.1576299763045734, Cross-val mean=0.54
+
+
+Gradient Boosting highest accuracy of 0.6554347593717175.

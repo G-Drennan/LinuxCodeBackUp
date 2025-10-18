@@ -1,0 +1,35 @@
+--- Model scores for features: HSVI_Traits ---
+Random Forest Train:  R2=0.99, mse = 144.55612326395354 
+Test R2=0.93, mse = 808.5888412800826, Cross-val mean=0.91
+
+Ada Boost Train:  R2=0.92, mse = 875.2897401110109 
+Test R2=0.90, mse = 1091.266776167788, Cross-val mean=0.88
+
+Gradient Boosting Train:  R2=0.97, mse = 299.179567562256 
+Test R2=0.93, mse = 823.8265800007438, Cross-val mean=0.91
+
+Decision Tree Train:  R2=0.93, mse = 854.2138465342305 
+Test R2=0.88, mse = 1353.883616068076, Cross-val mean=0.83
+
+
+Random Forest highest accuracy of 0.9090251771169902.
+
+--- Sequential Feature Selection ---
+Predicting: Traits : Chlorophyll
+Selected feature indices: [11 13 14 20 22],
+ Selected feature names: ['ChlDela', 'RDVI', 'GDVI', 'RENDVI', 'NDNI']
+
+--- Performance on Best Feature Subset ---
+Selected Features: ['ChlDela', 'RDVI', 'GDVI', 'RENDVI', 'NDNI']
+Random Forest Train:  R2=0.99, mse = 125.8236706461298 
+Test R2=0.92, mse = 840.4911514817562, Cross-val mean=0.92
+
+Ada Boost Train:  R2=0.92, mse = 930.6479899634627 
+Test R2=0.89, mse = 1179.1509419433098, Cross-val mean=0.88
+
+Gradient Boosting Train:  R2=0.97, mse = 390.9918623268837 
+Test R2=0.92, mse = 855.5533822468402, Cross-val mean=0.91
+
+Decision Tree Train:  R2=0.92, mse = 898.2987965790188 
+Test R2=0.88, mse = 1317.6234799374593, Cross-val mean=0.86
+
