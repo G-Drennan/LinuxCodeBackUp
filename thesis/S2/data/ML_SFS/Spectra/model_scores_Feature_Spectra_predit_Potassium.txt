@@ -1,0 +1,35 @@
+--- Model scores for features: Spectra ---
+Random Forest Train:  R2=0.89, mse = 0.02097865544862258 
+Test R2=0.14, mse = 0.15819839060258262, Cross-val mean=0.21
+
+Ada Boost Train:  R2=0.46, mse = 0.10460559252954116 
+Test R2=0.07, mse = 0.17236068867892476, Cross-val mean=0.15
+
+Gradient Boosting Train:  R2=0.78, mse = 0.043672431915011675 
+Test R2=0.14, mse = 0.15931759449961397, Cross-val mean=0.20
+
+Decision Tree Train:  R2=0.43, mse = 0.11067234440050283 
+Test R2=0.03, mse = 0.17959417374976883, Cross-val mean=-0.03
+
+
+Random Forest highest accuracy of 0.21177165826454614.
+
+--- Sequential Feature Selection ---
+Predicting: Traits : Potassium
+Selected feature indices: [ 19  48 181 252 315],
+ Selected feature names: ['545', '690', '1355', '1710', '2025']
+
+--- Performance on Best Feature Subset ---
+Selected Features: ['545', '690', '1355', '1710', '2025']
+Random Forest Train:  R2=0.89, mse = 0.02165152943354766 
+Test R2=0.02, mse = 0.1810276171023244, Cross-val mean=0.18
+
+Ada Boost Train:  R2=0.30, mse = 0.13761133538323778 
+Test R2=0.01, mse = 0.18254135989286982, Cross-val mean=0.09
+
+Gradient Boosting Train:  R2=0.64, mse = 0.07044531978390282 
+Test R2=0.06, mse = 0.17384220732115566, Cross-val mean=0.15
+
+Decision Tree Train:  R2=0.43, mse = 0.11091454449741635 
+Test R2=-0.10, mse = 0.20411204401319652, Cross-val mean=0.03
+

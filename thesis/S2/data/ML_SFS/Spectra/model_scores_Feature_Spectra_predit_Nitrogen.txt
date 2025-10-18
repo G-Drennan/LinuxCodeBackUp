@@ -1,15 +1,35 @@
 --- Model scores for features: Spectra ---
-Random Forest Train:  R2=0.95, mse = 0.020026776979994304 
-Test R2=0.72, mse = 0.12357244387717327, Cross-val mean=0.66
+Random Forest Train:  R2=0.95, mse = 0.0206131491170493 
+Test R2=0.72, mse = 0.12127579103124428, Cross-val mean=0.66
 
-Ada Boost Train:  R2=0.74, mse = 0.11171636365768105 
-Test R2=0.66, mse = 0.1473243007425944, Cross-val mean=0.63
+Ada Boost Train:  R2=0.75, mse = 0.10998052473807049 
+Test R2=0.66, mse = 0.14654842892031147, Cross-val mean=0.62
 
 Gradient Boosting Train:  R2=0.90, mse = 0.04133484494906899 
-Test R2=0.71, mse = 0.12431887890079894, Cross-val mean=0.66
+Test R2=0.71, mse = 0.1252515476002739, Cross-val mean=0.66
 
 Decision Tree Train:  R2=0.76, mse = 0.10368294606590987 
-Test R2=0.64, mse = 0.1576299763045734, Cross-val mean=0.54
+Test R2=0.62, mse = 0.16645482655549326, Cross-val mean=0.54
 
 
-Gradient Boosting highest accuracy of 0.6554347593717175.
+Random Forest highest accuracy of 0.661401449285915.
+
+--- Sequential Feature Selection ---
+Predicting: Traits : Nitrogen
+Selected feature indices: [  6  52 228 302 343],
+ Selected feature names: ['480', '710', '1590', '1960', '2165']
+
+--- Performance on Best Feature Subset ---
+Selected Features: ['480', '710', '1590', '1960', '2165']
+Random Forest Train:  R2=0.95, mse = 0.020355975188207844 
+Test R2=0.70, mse = 0.12838399205804066, Cross-val mean=0.66
+
+Ada Boost Train:  R2=0.69, mse = 0.1333905275278942 
+Test R2=0.65, mse = 0.15062509215826517, Cross-val mean=0.62
+
+Gradient Boosting Train:  R2=0.85, mse = 0.065053225987013 
+Test R2=0.70, mse = 0.12970262728076976, Cross-val mean=0.66
+
+Decision Tree Train:  R2=0.73, mse = 0.11599993432028312 
+Test R2=0.64, mse = 0.15553074829243008, Cross-val mean=0.57
+

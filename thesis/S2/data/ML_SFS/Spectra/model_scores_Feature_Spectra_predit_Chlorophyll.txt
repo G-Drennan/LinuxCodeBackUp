@@ -1,0 +1,35 @@
+--- Model scores for features: Spectra ---
+Random Forest Train:  R2=0.99, mse = 152.06672470765852 
+Test R2=0.91, mse = 1038.4372227691324, Cross-val mean=0.90
+
+Ada Boost Train:  R2=0.91, mse = 979.9723396093437 
+Test R2=0.88, mse = 1344.2564707589795, Cross-val mean=0.87
+
+Gradient Boosting Train:  R2=0.98, mse = 258.5966891062974 
+Test R2=0.91, mse = 1004.1621274204767, Cross-val mean=0.91
+
+Decision Tree Train:  R2=0.91, mse = 985.618803634754 
+Test R2=0.82, mse = 1965.0912313678039, Cross-val mean=0.83
+
+
+Gradient Boosting highest accuracy of 0.9109724107918608.
+
+--- Sequential Feature Selection ---
+Predicting: Traits : Chlorophyll
+Selected feature indices: [  8  22  53  77 197],
+ Selected feature names: ['490', '560', '715', '835', '1435']
+
+--- Performance on Best Feature Subset ---
+Selected Features: ['490', '560', '715', '835', '1435']
+Random Forest Train:  R2=0.99, mse = 146.59118672439405 
+Test R2=0.91, mse = 1010.1941368928517, Cross-val mean=0.91
+
+Ada Boost Train:  R2=0.90, mse = 1149.6107015971209 
+Test R2=0.86, mse = 1496.118236237283, Cross-val mean=0.87
+
+Gradient Boosting Train:  R2=0.97, mse = 395.39732146840413 
+Test R2=0.92, mse = 934.1723386809183, Cross-val mean=0.91
+
+Decision Tree Train:  R2=0.91, mse = 1062.6125494916644 
+Test R2=0.85, mse = 1671.3340869723893, Cross-val mean=0.84
+
