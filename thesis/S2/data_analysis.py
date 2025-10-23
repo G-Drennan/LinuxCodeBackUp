@@ -52,7 +52,9 @@ from sklearn.feature_selection import SequentialFeatureSelector
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.datasets import load_iris
 
- 
+from sklearn.datasets import make_friedman1
+from sklearn.feature_selection import RFE
+
 
 class C_Data:
     def __init__(self, filenames,filenames_keys, drop_list = [], wavelenght_min = 450, reduce_wavelenghts = False): 
@@ -832,7 +834,116 @@ class C_SFS:
             f.write(f"\n{model_obj.models_dict[best_model_name]} highest accuracy of {max_cross_val_mean}.\n")  
         self.best_model_name = model_obj.models_dict[best_model_name] 
         
+
+class C_RFE:
+    def __init__(self,  dataDict, features_name = 'missing'): 
+        self.model = None
+        self.model_exists = False 
+        self.dataDict = dataDict 
+        self.tnt = C_Test_train_split(dataDict)
+        self.outPutPath = f'./data/ML_RFE/{features_name}/'  
+        #create the output dir if it does not exist
+        os.makedirs(self.outPutPath, exist_ok=True)   
+        self.score_file_path = None   
     
+    def run_rfe(self, features_key, class_main_key, class_name, n_features_to_select=5):  
+        self.feature_names = np.array(self.tnt.extract_features(features_key)[1])  
+        print(f"run RFE on {class_main_key} : {class_name}")  
+        self.score_file_path = os.path.join(self.outPutPath, f'model_scores_Feature_{features_key}_predit_{class_name}.txt')        #create the file  
+        #whipe the file if it exists
+        with open(f'{self.score_file_path}', 'w') as f:
+            f.write(f"--- Model scores for features: {features_key} ---\n")  
+        
+        self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key  = self.tnt.make_training_n_test_sets(features_key, class_main_key, class_name) 
+         
+        #model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, output_dir=self.outPutPath) 
+        #model = model_obj.train_model(class_name, model_name="RF", file_name_modifier='SFS_initial_run')[0]
+        self.find_best_model(features_key, class_main_key, class_name)
+
+        # RFE expects an estimator and n_features_to_select (optionally step)
+        rfe = RFE(estimator=self.model, n_features_to_select=n_features_to_select, step=1) 
+        rfe.fit(self.x_train, self.y_train)       
+        #extract the selected feature indices
+
+
+        self.selected_features = rfe.get_support(indices=True)
+        print(self.selected_features)
+        #print("Selected feature indices:", selected_features)
+        #print("Selected feature names:", [keys[i] for i in selected_features])
+        #write selected features to score file
+        with open(f'{self.score_file_path}', 'a') as f:
+            f.write(f"\n--- Sequential Feature Selection ---\n") 
+            f.write(f"Predicting: {class_main_key} : {class_name}\n")   
+            f.write(f"Selected feature indices: {self.selected_features},\n Selected feature names: {[keys[i] for i in self.selected_features]}\n")
+        
+        #now run the models again with only the selected features
+        self.run_best_features_on_other_ML(features_key, class_main_key, class_name) 
+
+        return self.selected_features 
+    
+    def run_best_features_on_other_ML(self, features_key, class_main_key, class_name): 
+        print("run best features on other ML")
+
+        if getattr(self, "selected_features", None) is None:
+            raise RuntimeError("self.selected_features is not set. Run SFS first.")
+
+        # assume selected_features is an array of integer indices
+        selected_indices = np.asarray(self.selected_features, dtype=int)
+        if selected_indices.size == 0:
+            raise RuntimeError("No features selected.")
+
+        # names for logging
+        selected_feature_names = list(self.feature_names[selected_indices])
+
+        # Do not overwrite original full data; use local reduced arrays
+        x_train_sel = self.x_train[:, selected_indices]
+        x_test_sel = self.x_test[:, selected_indices]
+
+        # Train and evaluate all models on selected features
+        model_obj = C_Dession_trees(x_train_sel, x_test_sel, self.y_train, self.y_test,
+                                    self.cond_train, self.cond_test, output_dir=self.outPutPath)
+        
+        selected_features = self.feature_names[self.selected_features]
+
+        with open(f'{self.score_file_path}', 'a') as f: 
+            f.write("\n--- Performance on Best Feature Subset ---\n")
+            f.write(f"Selected Features: {selected_features.tolist()}\n")
+
+            for i, model_name in enumerate(model_obj.models): 
+                model, r2_test, mse_test,  r2_train, mse_train, cross_val_mean   = model_obj.train_model(class_name, model_name, file_name_modifier='SFS_best_features')   
+
+                f.write(f"{model_obj.models_dict[model_name]} Train:  R2={r2_train:.2f}, mse = {mse_train} \nTest R2={r2_test:.2f}, mse = {mse_test}, Cross-val mean={cross_val_mean:.2f}\n\n")
+
+        print("Finished evaluating all models on best feature subset.")  
+ 
+    
+    def find_best_model(self, features_key, class_main_key, name):  
+        print("find best model")
+        max_cross_val_mean = 0
+
+        model_obj = C_Dession_trees(self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, output_dir=self.outPutPath) 
+        for i, model_name in enumerate(model_obj.models): #        self.models = ["RF", "AB", "GB", "DT"] 
+ 
+            #genetic feature selection, save best features from first run use for other runs for consistencey and comparision. 
+            model,  r2_test, mse_test,  r2_train, mse_train, cross_val_mean    = model_obj.train_model(name, model_name, file_name_modifier='initial_run')
+            #write the model and its score to a file
+            with open(f'{self.score_file_path}', 'a') as f:    
+                f.write(f"{model_obj.models_dict[model_name]} Train:  R2={r2_train:.2f}, mse = {mse_train} \nTest R2={r2_test:.2f}, mse = {mse_test}, Cross-val mean={cross_val_mean:.2f}\n\n")
+
+            if cross_val_mean > max_cross_val_mean : #use cross_val_mean to find best model 
+                print(f"best model is currently {model_name}") 
+                max_cross_val_mean = cross_val_mean
+                self.model = model
+                self.model_exists = True  
+                best_model_name = model_name    
+     
+        print(f"{model_obj.models_dict[best_model_name]} highest accuracy of {max_cross_val_mean}.") 
+        with open(f'{self.score_file_path}', 'a') as f: 
+            f.write(f"\n{model_obj.models_dict[best_model_name]} highest accuracy of {max_cross_val_mean}.\n")  
+        self.best_model_name = model_obj.models_dict[best_model_name] 
+        
+    
+  
 
 
 class C_gen_alg:
@@ -1174,17 +1285,17 @@ if __name__ == '__main__':
     class_names = [f for f in class_names if 'Leaf' not in f]
     print(class_names) #remove leaf from traits.   
     """
-    tig = filenames_keys[4] 
+    tig = filenames_keys[4]   
     print(tig) 
-    sfs = C_SFS(dataDict, features_name=tig)  #HSVI_Traits              
+    rfe = C_RFE(dataDict, features_name=tig)  #HSVI_Traits              
     class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
     print(class_names)
     class_names = [f for f in class_names if 'Leaf' not in f]
     print(class_names) #remove leaf from traits.  
 
     for class_name in class_names:   
-        print(f"\nNew model {class_name}")     
-        sfs.run_sfs(features_key=tig, class_main_key=filenames_keys[2], class_name=class_name)  #Spectra
+        print(f"\nNew model {class_name}")      
+        rfe.run_rfe(features_key=tig, class_main_key=filenames_keys[2], class_name=class_name)  #Spectra
         #break  
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ junk ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 

@@ -1,0 +1,35 @@
+--- Model scores for features: Spectra ---
+Random Forest Train:  R2=0.89, mse = 0.0009019484592133461 
+Test R2=0.13, mse = 0.006474084263085397, Cross-val mean=0.15
+
+Ada Boost Train:  R2=0.36, mse = 0.005219555462231041 
+Test R2=-0.08, mse = 0.007997809658285483, Cross-val mean=-0.02
+
+Gradient Boosting Train:  R2=0.78, mse = 0.0017954040974189906 
+Test R2=0.10, mse = 0.006688651949610676, Cross-val mean=0.12
+
+Decision Tree Train:  R2=0.56, mse = 0.003569303796202666 
+Test R2=-0.11, mse = 0.008268769061391228, Cross-val mean=-0.14
+
+
+Random Forest highest accuracy of 0.14516383839710084.
+
+--- Sequential Feature Selection ---
+Predicting: Traits : Phosphorus
+Selected feature indices: [ 44  53  55 109 224],
+ Selected feature names: ['670', '715', '725', '995', '1570']
+
+--- Performance on Best Feature Subset ---
+Selected Features: ['670', '715', '725', '995', '1570']
+Random Forest Train:  R2=0.89, mse = 0.000938615509235835 
+Test R2=0.13, mse = 0.006490232162956091, Cross-val mean=0.15
+
+Ada Boost Train:  R2=0.20, mse = 0.006571910070595002 
+Test R2=-0.18, mse = 0.008744690275545867, Cross-val mean=-0.10
+
+Gradient Boosting Train:  R2=0.63, mse = 0.0030301652180751795 
+Test R2=0.13, mse = 0.00646413905428933, Cross-val mean=0.16
+
+Decision Tree Train:  R2=0.47, mse = 0.004321550406629749 
+Test R2=-0.09, mse = 0.008072799780248958, Cross-val mean=0.02
+
