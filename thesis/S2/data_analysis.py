@@ -390,7 +390,7 @@ class C_analysis:
 
     def perform_covariance_analysis_two_diff_data_sets(self, filenames_key_1, filenames_key_2,  normalise = True):
         traits_1 = list(next(iter(self.init_dict.values()))[filenames_key_1].keys())
-        traits_2 = list(next(iter(self.init_dict.values()))[filenames_key_2].keys())
+        traits_2 = list(next(iter(self.init_dict.values()))[filenames_key_2].keys()) 
 
         # build samples arrays: shape (n_samples, n_features)
         samples_1 = np.array([
@@ -404,7 +404,7 @@ class C_analysis:
         ], dtype=float)
 
         # optional column-wise standardisation (across all features together, then split back)
-        if normalise: 
+        if normalise:
             scaler = StandardScaler()
             combined = scaler.fit_transform(np.hstack((samples_1, samples_2)))
             samples_1 = combined[:, :len(traits_1)]
@@ -419,21 +419,47 @@ class C_analysis:
         X2c = samples_2 - samples_2.mean(axis=0)
         cov_12 = (X1c.T @ X2c) / (n - 1)
 
+        # determine ordering for traits in each set by hierarchical clustering (correlation distance)
+        if samples_1.shape[1] > 1:
+            try:
+                dist1 = pdist(samples_1.T, metric='correlation')
+                Z1 = linkage(dist1, method='average')
+                order1 = leaves_list(Z1)
+            except Exception:
+                order1 = np.arange(len(traits_1))
+        else:
+            order1 = np.arange(len(traits_1))
+
+        if samples_2.shape[1] > 1:
+            try:
+                dist2 = pdist(samples_2.T, metric='correlation')
+                Z2 = linkage(dist2, method='average')
+                order2 = leaves_list(Z2)
+            except Exception:
+                order2 = np.arange(len(traits_2))
+        else:
+            order2 = np.arange(len(traits_2))
+
+        # reorder cross-covariance block and labels
+        cov_12_reordered = cov_12[np.ix_(order1, order2)]
+        traits_1_reordered = [traits_1[i] for i in order1]
+        traits_2_reordered = [traits_2[i] for i in order2]
+
         # plot heatmap with rows = traits_1 and cols = traits_2
-        plt.figure(figsize=(max(6, 0.3 * len(traits_2)), max(6, 0.3 * len(traits_1))))
+        plt.figure(figsize=(max(6, 0.25 * len(traits_2_reordered)), max(6, 0.25 * len(traits_1_reordered))))
         sns.heatmap(
-            cov_12,
-            annot=True if cov_12.size <= 400 else False,
+            cov_12_reordered,
+            annot=True if cov_12_reordered.size <= 400 else False,
             fmt=".2f",
             cmap='coolwarm',
             square=False,
-            xticklabels=traits_2,
-            yticklabels=traits_1,
+            xticklabels=traits_2_reordered,
+            yticklabels=traits_1_reordered,
             cbar_kws={'label': 'Covariance'}
         )
-        plt.title(f'Cross-covariance: {filenames_key_1} (rows) vs {filenames_key_2} (cols)')
+        plt.title(f'Cross-covariance: {filenames_key_1} (rows) vs {filenames_key_2} (cols) — clustered by correlation')
 
-        out_path = f'{self.output_dir_covariance}cross_covariance_{filenames_key_1}_vs_{filenames_key_2}.png'
+        out_path = f'{self.output_dir_covariance}cross_covariance_{filenames_key_1}_vs_{filenames_key_2}_clustered.png'
         plt.tight_layout()
         plt.savefig(out_path)
         plt.show()
@@ -1337,7 +1363,7 @@ if __name__ == '__main__':
     """a.update_features_n_run_coveriance_analysis(filenames_keys[2], class_names) 
     a.perform_covariance_analysis(filenames_keys[3]) 
     """ 
-    a.perform_covariance_analysis_two_diff_data_sets(filenames_keys[2], filenames_keys[3])
+    a.perform_covariance_analysis_two_diff_data_sets(filenames_keys[3], filenames_keys[2]) 
 
 
     """ 
