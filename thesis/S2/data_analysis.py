@@ -55,6 +55,9 @@ from sklearn.datasets import load_iris
 from sklearn.datasets import make_friedman1
 from sklearn.feature_selection import RFE
 
+from scipy.cluster.hierarchy import linkage, leaves_list
+from scipy.spatial.distance import pdist 
+import seaborn as sns 
 
 class C_Data:
     def __init__(self, filenames,filenames_keys, drop_list = [], wavelenght_min = 450, reduce_wavelenghts = False): 
@@ -309,21 +312,61 @@ class C_analysis:
         self.output_dir_covariance = './data/figures/covariance/'
         os.makedirs(self.output_dir_covariance, exist_ok=True)   
 
-    def update_features(self, features_names): 
-        self.features_names = features_names 
+    def update_features_n_run_coveriance_analysis(self, filenames_key, features_names):   
+        self.features_names = features_names
+        self.perform_covariance_analysis(filenames_key, normalise=True, not_given_features=False)   
     
-    def perform_covariance_analysis(self, filenames_key, normalise = True): #, samples_name = 'Samples', features_name = 'Features' 
-        features_names = list(next(iter(self.init_dict.values()))[filenames_key].keys())
+    def perform_covariance_analysis(self, filenames_key, normalise = True, not_given_features = True): #, samples_name = 'Samples', features_name = 'Features' 
+        if not_given_features: 
+            self.features_names = list(next(iter(self.init_dict.values()))[filenames_key].keys()) 
         samples = []
         for entry in self.init_dict.values():
-            samples.append([entry[filenames_key][trait] for trait in features_names])
+            samples.append([entry[filenames_key][trait] for trait in self.features_names])
  
         #normalise samples
         if normalise:
             scaler = StandardScaler()
             samples = scaler.fit_transform(samples) 
 
-        cov = EmpiricalCovariance().fit(samples)
+        # feature-wise correlation matrix
+        corr = np.corrcoef(samples, rowvar=False) 
+
+        # determine order by hierarchical clustering of features (columns)
+        if corr.shape[0] > 1:
+            # use correlation distance between feature columns
+            condensed_dist = pdist(samples.T, metric='correlation')
+            Z = linkage(condensed_dist, method='average') 
+            order = leaves_list(Z)
+        else:
+            order = np.arange(corr.shape[0])
+
+        # reorder correlation matrix and labels
+        corr_reordered = corr[np.ix_(order, order)]
+        names_reordered = [self.features_names[i] for i in order]
+
+        # plot a single ordered heatmap
+        plt.figure(figsize=(10, max(6, 0.35 * len(names_reordered))))
+        sns.heatmap(
+            corr_reordered,
+            annot=True if len(names_reordered) <= 30 else False,
+            fmt=".2f",
+            cmap='coolwarm',
+            square=True,
+            xticklabels=names_reordered,
+            yticklabels=names_reordered,
+            cbar_kws={'label': 'Pearson correlation'}
+        )
+        plt.title('Covariance Matrix')   
+
+        out_path = f'{self.output_dir_covariance}covariance_matrix_{filenames_key}_clustered.png'
+        plt.tight_layout()
+        plt.savefig(out_path)
+        plt.show()
+        plt.close()
+        print(f"Clustered covariance plot saved to {out_path}")
+
+        """
+        cov = EmpiricalCovariance().fit(samples) 
         #plt.figure(figsize=(14, 12))  
         sns.heatmap(
             cov.covariance_,
@@ -331,8 +374,8 @@ class C_analysis:
             fmt=".2f", 
             cmap='coolwarm',
             square=True,
-            xticklabels=features_names,
-            yticklabels=features_names,
+            xticklabels=self.features_names,
+            yticklabels=self.features_names,
             #annot_kws={"size": 8}   
         )
         plt.title('Covariance Matrix') 
@@ -343,54 +386,59 @@ class C_analysis:
         plt.show() 
         plt.close()  
         print(f"Covariance matrix saved to {self.output_dir_covariance}covariance_matrix_{filenames_key}.png")
+        """
 
     def perform_covariance_analysis_two_diff_data_sets(self, filenames_key_1, filenames_key_2,  normalise = True):
         traits_1 = list(next(iter(self.init_dict.values()))[filenames_key_1].keys())
         traits_2 = list(next(iter(self.init_dict.values()))[filenames_key_2].keys())
 
-        #print(traits_1, traits_2)
-
-        samples_1 = [
+        # build samples arrays: shape (n_samples, n_features)
+        samples_1 = np.array([
             [entry[filenames_key_1][trait] for trait in traits_1]
             for entry in self.init_dict.values()
-        ]
+        ], dtype=float)
 
-        samples_2 = [
-            [entry[filenames_key_2][trait] for trait in traits_2]
+        samples_2 = np.array([
+            [entry[filenames_key_2][trait] for trait in traits_2] 
             for entry in self.init_dict.values()
-        ]
+        ], dtype=float)
 
-        combined_samples = np.hstack((samples_1, samples_2))
-
-
-         #normalise both samples
-        if normalise:
+        # optional column-wise standardisation (across all features together, then split back)
+        if normalise: 
             scaler = StandardScaler()
-            combined_samples = scaler.fit_transform(combined_samples) 
-        
-        combined_features = []
-        combined_features.append(traits_1)
-        combined_features.append(traits_2)
-        combined_features = [item for sublist in combined_features for item in sublist]
-        print(combined_features)  
+            combined = scaler.fit_transform(np.hstack((samples_1, samples_2)))
+            samples_1 = combined[:, :len(traits_1)]
+            samples_2 = combined[:, len(traits_1):]
 
+        # compute cross-covariance block: cov(X1, X2) shape (n_features1, n_features2)
+        n = samples_1.shape[0]
+        if n <= 1:
+            raise ValueError("Not enough samples to compute covariance")
 
-        cov = EmpiricalCovariance().fit(combined_samples)
+        X1c = samples_1 - samples_1.mean(axis=0)
+        X2c = samples_2 - samples_2.mean(axis=0)
+        cov_12 = (X1c.T @ X2c) / (n - 1)
+
+        # plot heatmap with rows = traits_1 and cols = traits_2
+        plt.figure(figsize=(max(6, 0.3 * len(traits_2)), max(6, 0.3 * len(traits_1))))
         sns.heatmap(
-            cov.covariance_,
-            annot=True,
+            cov_12,
+            annot=True if cov_12.size <= 400 else False,
+            fmt=".2f",
             cmap='coolwarm',
-            square=True,
-            xticklabels=combined_features,
-            yticklabels=combined_features 
+            square=False,
+            xticklabels=traits_2,
+            yticklabels=traits_1,
+            cbar_kws={'label': 'Covariance'}
         )
-        plt.title('Covariance Matrix')
-        #save to self.output_dir
-        plt.savefig(f'{self.output_dir_covariance}covariance_matrix_{filenames_key_1}_and_{filenames_key_2}.png')
+        plt.title(f'Cross-covariance: {filenames_key_1} (rows) vs {filenames_key_2} (cols)')
+
+        out_path = f'{self.output_dir_covariance}cross_covariance_{filenames_key_1}_vs_{filenames_key_2}.png'
+        plt.tight_layout()
+        plt.savefig(out_path)
         plt.show()
         plt.close()
-        print(f"Covariance matrix saved to {self.output_dir_covariance}covariance_matrix_{filenames_key_1}_and_{filenames_key_2}.png") 
-    
+        print(f"Cross-covariance matrix saved to {out_path}")
 
 class C_PCA: 
     def __init__(self, dataDict, sort_key,  feature_key='Hs_Traits'): 
@@ -498,7 +546,8 @@ class C_Test_train_split:
         self.condition_distribution()
 
         print("Training set size:", len(self.x_train), "Test set size:", len(self.x_test))
-        self.training_sets_made = True  
+        self.training_sets_made = True 
+        self.condition_distribution()  
 
         return self.x_train, self.x_test, self.y_train, self.y_test, self.cond_train, self.cond_test, keys, trait_key 
 
@@ -1278,13 +1327,29 @@ if __name__ == '__main__':
     # Ploting spectra based off conditions
     sort_key = 'Conditions' 
     dictManager.write_dict_to_file(dataDict, "original")   
-    """
+
+    class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
+    print(class_names)
+    class_names = [f for f in class_names if 'Leaf' not in f]
+    print(class_names) #remove leaf from traits.
+
+    a = C_analysis(df, dataDict)
+    """a.update_features_n_run_coveriance_analysis(filenames_keys[2], class_names) 
+    a.perform_covariance_analysis(filenames_keys[3]) 
+    """ 
+    a.perform_covariance_analysis_two_diff_data_sets(filenames_keys[2], filenames_keys[3])
+
+
+    """ 
+
     ga = C_gen_alg(dataDict, n_gen = 30, features_name=filenames_keys[4])  #Spectra              
     class_names = list(next(iter(dataDict.values()))[filenames_keys[2]].keys())  
     print(class_names)
     class_names = [f for f in class_names if 'Leaf' not in f]
     print(class_names) #remove leaf from traits.   
     """
+    """
+
     tig = filenames_keys[4]   
     print(tig) 
     rfe = C_RFE(dataDict, features_name=tig)  #HSVI_Traits              
@@ -1296,6 +1361,7 @@ if __name__ == '__main__':
     for class_name in class_names:   
         print(f"\nNew model {class_name}")      
         rfe.run_rfe(features_key=tig, class_main_key=filenames_keys[2], class_name=class_name)  #Spectra
+    """
         #break  
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ junk ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
